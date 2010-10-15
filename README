@@ -1,0 +1,5 @@
+New Type-safe string output formatter
+ safe and compact substitution of printf/iostream
+
+This project licensed by Boost Software License 1.0.
+
