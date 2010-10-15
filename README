@@ -3,3 +3,10 @@ New Type-safe string output formatter
 
 This project licensed by Boost Software License 1.0.
 
+
+Features:
+ * type-safe
+ * customizable with a few set expressions.
+ * small object code size (quarter of newlib's printf)
+ * separated floating-point code
+ * exception-free
