@@ -1,7 +1,7 @@
 #ifndef NTFMT_FWD_HPP_
 #define NTFMT_FWD_HPP_
 
-#include <boost/config.hpp>
+#include "ntfmt_compat.hpp"
 #include <boost/cstdint.hpp>
 
 namespace ntfmt {
@@ -59,9 +59,9 @@ namespace ntfmt {
 
 		struct sink_fn_t: noncopyable {
 			virtual void operator ()(char const *s) { while (*s) (*this)(*s++); }
-			virtual void operator ()(char const c) = 0;
+			virtual void operator ()(char c) = 0;
 			virtual void operator ()(wchar_t const *s) { while (*s) (*this)(*s++); }
-			virtual void operator ()(wchar_t const c) { (*this)(static_cast<char>(c)); }
+			virtual void operator ()(wchar_t c) { (*this)(static_cast<char>(c)); }
 			virtual ~sink_fn_t() { }
 		};
 	}

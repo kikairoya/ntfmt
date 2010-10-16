@@ -10,10 +10,10 @@ namespace ntfmt {
 		struct sink_cfile_fn_t: sink_fn_t {
 			sink_cfile_fn_t(FILE *const file): fp(file) { }
 			virtual ~sink_cfile_fn_t() { }
-			void operator ()(char const *const s) { fputs(s, fp); }
-			void operator ()(char const c) { fputc(c, fp); }
-			void operator ()(wchar_t const *const s) { fputws(s, fp); }
-			void operator ()(wchar_t const c) { fputwc(c, fp); }
+			void operator ()(char const *s) { fputs(s, fp); }
+			void operator ()(char c) { fputc(c, fp); }
+			void operator ()(wchar_t const *s) { fputws(s, fp); }
+			void operator ()(wchar_t c) { fputwc(c, fp); }
 			FILE *const fp;
 		};
 		struct sink_stdout_fn_t: sink_cfile_fn_t {
