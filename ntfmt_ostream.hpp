@@ -9,10 +9,10 @@ namespace ntfmt {
 		template <typename charT, typename Traits = std::char_traits<charT> >
 		struct sink_ostream_fn_t: sink_fn_t {
 			sink_ostream_fn_t(std::basic_ostream<charT, Traits> &os): os(os) { }
-			void operator ()(char const *s) { os << s; }
-			void operator ()(char c) { os << c; }
-			void operator ()(wchar_t const *s) { os << s; }
-			void operator ()(wchar_t c) { os << c; }
+			int operator ()(char const *s) { os << s; return strlen(s); }
+			int operator ()(char c) { os << c; return c; }
+			int operator ()(wchar_t const *s) { os << s; return wcslen(s); }
+			int operator ()(wchar_t c) { os << c; return c;}
 			std::basic_ostream<charT, Traits> &os;
 		};
 	}

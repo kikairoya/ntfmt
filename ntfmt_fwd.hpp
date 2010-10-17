@@ -58,10 +58,10 @@ namespace ntfmt {
 		};
 
 		struct sink_fn_t: noncopyable {
-			virtual void operator ()(char const *s) { while (*s) (*this)(*s++); }
-			virtual void operator ()(char c) = 0;
-			virtual void operator ()(wchar_t const *s) { while (*s) (*this)(*s++); }
-			virtual void operator ()(wchar_t c) { (*this)(static_cast<char>(c)); }
+			virtual int operator ()(char const *s) { for (int n = 0; *s && (*this)(*s++) >= 0; ++n) ; }
+			virtual int operator ()(char c) = 0;
+			virtual int operator ()(wchar_t const *s) { for (int n = 0; *s && (*this)(*s++); ++n) ; }
+			virtual int operator ()(wchar_t c) { return (*this)(static_cast<char>(c)); }
 			virtual ~sink_fn_t() { }
 		};
 	}

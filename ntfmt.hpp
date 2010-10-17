@@ -39,15 +39,16 @@ namespace ntfmt {
 		using boost::is_pointer;
 		using boost::make_unsigned;
 
+		template <typename charT>
 		struct sink_strbuf_fn_t: sink_fn_t {
 			template <size_t N>
-			sink_strbuf_fn_t(char (*const &buf)[N]): buf(*buf), p(*buf), size(N) { }
-			sink_strbuf_fn_t(char *const buf, size_t const size): buf(buf), p(buf), size(size) { }
-			void operator ()(char const *s) { while (*s && p < buf+size-1) *p++ = *s++, *p = 0; }
-			void operator ()(char c) { if (p < buf+size-1) *p++ = c, *p = 0; }
-			char *const buf;
-			char *p;
-			size_t const size;
+			sink_strbuf_fn_t(charT (*const &buf)[N]): buf(*buf), p(*buf), size(N) { }
+			sink_strbuf_fn_t(charT *const buf, size_t const size): buf(buf), p(buf), size(size) { }
+			int operator ()(charT const *s) { for (int n=0; *s && p < buf+size-1; ++n, *p++ = *s++, *p = 0) ; }
+			int operator ()(charT c) { if (p < buf+size-1) { *p++ = c; *p = 0; return c; } return -1; }
+			charT *const buf;
+			charT *p;
+			size_t constT size;
 		};
 
 		inline flags_t const default_flags() {
@@ -348,7 +349,7 @@ namespace ntfmt {
 		template <typename T>
 		sink_t const &operator <<(T const &v) const { return const_cast<sink_t *>(this)->operator <<(v); }
 	};
-	typedef sink_t<detail::sink_strbuf_fn_t> sink_strbuf;
+	typedef sink_t< detail::sink_strbuf_fn_t<char> > sink_strbuf;
 }
 
 #include "ntfmt_float.hpp"
