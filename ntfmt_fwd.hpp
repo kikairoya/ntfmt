@@ -60,12 +60,18 @@ namespace ntfmt {
 #endif
 		};
 
-		struct sink_fn_t: noncopyable {
-			virtual int operator ()(char const *s) { for (int n = 0; *s && (*this)(*s++) >= 0; ++n) ; }
-			virtual int operator ()(char c) = 0;
-			virtual int operator ()(wchar_t const *s) { for (int n = 0; *s && (*this)(*s++); ++n) ; }
-			virtual int operator ()(wchar_t c) { return (*this)(static_cast<char>(c)); }
-			virtual ~sink_fn_t() { }
+		struct sink_fn_base: noncopyable {
+			virtual int operator ()(char const *s)  { int n; for (n = 0; *s && (*this)(*s++) >= 0; ++n) ; return n; }
+			virtual int operator ()(char) { return -1; }
+			virtual int operator ()(wchar_t const *s)  { int n; for (n = 0; *s && (*this)(*s++) >= 0; ++n) ; return n; }
+			virtual int operator ()(wchar_t) { return -1; }
+			~sink_fn_base() { }
+		};
+		template <typename charT>
+		struct sink_fn_t: sink_fn_base {
+			typedef charT char_type;
+			int operator ()(charT c) = 0;
+			using sink_fn_base::operator ();
 		};
 	}
 

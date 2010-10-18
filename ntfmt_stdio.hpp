@@ -6,9 +6,9 @@
 
 namespace ntfmt {
 	namespace detail {
-		struct sink_cfile_fn_t: sink_fn_t {
+		template <typename charT>
+		struct sink_cfile_fn_t: sink_fn_t<charT> {
 			sink_cfile_fn_t(FILE *const file): fp(file) { }
-			virtual ~sink_cfile_fn_t() { }
 			int operator ()(char const *s) { return fputs(s, fp); }
 			int operator ()(char c) { return fputc(c, fp); }
 			int operator ()(wchar_t const *s) { return fputws(s, fp); }
@@ -16,16 +16,21 @@ namespace ntfmt {
 		private:
 			FILE *const fp;
 		};
-		struct sink_stdout_fn_t: sink_cfile_fn_t {
-			sink_stdout_fn_t(): sink_cfile_fn_t(stdout) { }
+		template <typename charT>
+		struct sink_stdout_fn_t: sink_cfile_fn_t<charT> {
+			sink_stdout_fn_t(): sink_cfile_fn_t<charT>(stdout) { }
 		};
-		struct sink_stderr_fn_t: sink_cfile_fn_t {
-			sink_stderr_fn_t(): sink_cfile_fn_t(stderr) { }
+		template <typename charT>
+		struct sink_stderr_fn_t: sink_cfile_fn_t<charT> {
+			sink_stderr_fn_t(): sink_cfile_fn_t<charT>(stderr) { }
 		};
 	}
-	typedef sink_t<detail::sink_cfile_fn_t> sink_cfile;
-	typedef sink_t<detail::sink_stdout_fn_t> sink_stdout;
-	typedef sink_t<detail::sink_stderr_fn_t> sink_stderr;
+	typedef sink_t< detail::sink_cfile_fn_t<char> > sink_cfile;
+	typedef sink_t< detail::sink_stdout_fn_t<char> > sink_stdout;
+	typedef sink_t< detail::sink_stderr_fn_t<char> > sink_stderr;
+	typedef sink_t< detail::sink_cfile_fn_t<wchar_t> > sink_wcfile;
+	typedef sink_t< detail::sink_stdout_fn_t<wchar_t> > sink_wstdout;
+	typedef sink_t< detail::sink_stderr_fn_t<wchar_t> > sink_wstderr;
 }
 
 #endif

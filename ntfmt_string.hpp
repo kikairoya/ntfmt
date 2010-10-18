@@ -2,12 +2,11 @@
 #define NTFMT_STRING_HPP_
 
 #include "ntfmt.hpp"
-#include <string>
 
 namespace ntfmt {
 	namespace detail {
 		template <typename charT>
-		struct sink_string_fn_t: sink_fn_t {
+		struct sink_string_fn_t: sink_fn_t<charT> {
 			sink_string_fn_t(std::basic_string<charT> &str): str(str) { }
 			int operator ()(charT const *s) {
 				size_t const r = str.length();

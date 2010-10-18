@@ -7,7 +7,7 @@
 namespace ntfmt {
 	namespace detail {
 		template <typename charT, typename Traits = std::char_traits<charT> >
-		struct sink_ostream_fn_t: sink_fn_t {
+		struct sink_ostream_fn_t: sink_fn_t<charT> {
 			sink_ostream_fn_t(std::basic_ostream<charT, Traits> &os): os(os) { }
 			int operator ()(char const *s) { os << s; return strlen(s); }
 			int operator ()(char c) { os << c; return c; }

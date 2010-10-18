@@ -5,7 +5,10 @@
 
 #include <string.h>
 #include <ctype.h>
+#include <wctype.h>
 #include <cstdlib>
+#include <string>
+#include <algorithm>
 #include <limits>
 #include <utility>
 #include <boost/utility/enable_if.hpp>
@@ -42,8 +45,24 @@ namespace ntfmt {
 		using boost::is_pointer;
 		using boost::make_unsigned;
 
-		static char const hexstr[] = "0123456789abcdefg";
-		static wchar_t const whexstr[] = L"0123456789abcdefg";
+		template <typename T, size_t N>
+		inline T *array_begin(T (&a)[N]) { return &a[0]; }
+		template <typename T, size_t N>
+		inline T *array_end(T (&a)[N]) { return &a[N]; }
+		template <typename T>
+		struct array_elements;
+		template <typename T, size_t N>
+		struct array_elements<T [N]>: integral_constant<size_t, N> { };
+		template <typename charT> struct hexstr;
+		template <> struct hexstr<char> { static char const (&str())[18] { return "0123456789abcdefg"; } };
+		template <> struct hexstr<wchar_t> { static wchar_t const (&str())[18] { return L"0123456789abcdefg"; } };
+		template <typename charT>
+		inline charT to_hexstr(unsigned const v) { return hexstr<charT>::str()[v]; }
+		template <typename charT>
+		inline ptrdiff_t from_hexstr(charT c) {
+			typedef hexstr<charT> hex;
+			return std::lower_bound(array_begin(hex::str()), array_end(hex::str()), c) - array_begin(hex::str());
+		}
 
 		template <typename charT>
 		inline long gstrtol(charT const *, charT const **, int);
@@ -59,6 +78,13 @@ namespace ntfmt {
 		template <>
 		inline size_t gstrlen<wchar_t>(wchar_t const *const s) { return wcslen(s); }
 
+		template <typename charT>
+		inline charT gtoupper(charT const c);
+		template <>
+		inline char gtoupper<char>(char const c) { return static_cast<char>(toupper(c)); }
+		template <>
+		inline wchar_t gtoupper<wchar_t>(wchar_t const c) { return towupper(c); }
+
 		template <typename charT, char C, wchar_t W>
 		struct char_literal;
 		template <char C, wchar_t W>
@@ -66,13 +92,17 @@ namespace ntfmt {
 		template <char C, wchar_t W>
 		struct char_literal<wchar_t, C, W>: integral_constant<wchar_t, W> { };
 #define NTFMT_CH_LIT(c) char_literal<charT, c, L##c>::value
+#define NTFMT_CHR_ZERO NTFMT_CH_LIT('0')
+#define NTFMT_CHR_SPACE NTFMT_CH_LIT(' ')
+#define NTFMT_CHR_MINUS NTFMT_CH_LIT('-')
+#define NTFMT_CHR_PLUS NTFMT_CH_LIT('+')
+#define NTFMT_CHR_DOT NTFMT_CH_LIT('.')
 
 		template <typename charT>
-		struct sink_strbuf_fn_t: sink_fn_t {
+		struct sink_strbuf_fn_t: sink_fn_t<charT> {
 			template <size_t N>
 			sink_strbuf_fn_t(charT (*const &buf)[N]): buf(*buf), p(*buf), size(N) { }
 			sink_strbuf_fn_t(charT *const buf, size_t const size): buf(buf), p(buf), size(size) { }
-			int operator ()(charT const *s) { for (int n=0; *s && p < buf+size-1; ++n, *p++ = *s++, *p = 0) ; }
 			int operator ()(charT c) { if (p < buf+size-1) { *p++ = c; *p = 0; return c; } return -1; }
 		private:
 			charT *const buf;
@@ -93,17 +123,17 @@ namespace ntfmt {
 		cont:
 			if (!*fmtstr) return default_flags();
 			if (*fmtstr==NTFMT_CH_LIT('#')) { f.alter = 1; ++fmtstr; goto cont; }
-			if (*fmtstr==NTFMT_CH_LIT('0') && !f.minus) { f.zero = 1; ++fmtstr; goto cont; }
-			if (*fmtstr==NTFMT_CH_LIT('-')) { f.minus = 1; f.zero = 0; ++fmtstr; goto cont; }
-			if (*fmtstr==NTFMT_CH_LIT(' ') && !f.plus) { f.space = 1; ++fmtstr; goto cont; }
-			if (*fmtstr==NTFMT_CH_LIT('+')) { f.plus = 1; f.space = 0; ++fmtstr; goto cont; }
+			if (*fmtstr==NTFMT_CHR_ZERO && !f.minus) { f.zero = 1; ++fmtstr; goto cont; }
+			if (*fmtstr==NTFMT_CHR_MINUS) { f.minus = 1; f.zero = 0; ++fmtstr; goto cont; }
+			if (*fmtstr==NTFMT_CHR_SPACE && !f.plus) { f.space = 1; ++fmtstr; goto cont; }
+			if (*fmtstr==NTFMT_CHR_PLUS) { f.plus = 1; f.space = 0; ++fmtstr; goto cont; }
 			{
 				charT const *const p = fmtstr;
 				f.width = static_cast<int>(gstrtol(p, &fmtstr, 10));
 				f.width_enable = (p != fmtstr);
 			}
 			if (!*fmtstr) return default_flags();
-			if (*fmtstr=='.') {
+			if (*fmtstr==NTFMT_CHR_DOT) {
 				f.prec_enable = 1;
 				++fmtstr;
 				if (!*fmtstr) return default_flags();
@@ -168,45 +198,42 @@ namespace ntfmt {
 			return f;
 		}
 
-		template <size_t N>
-		inline void fill_str(char (&str)[N], char const c) { memset(str, c, N); }
-
-		template <typename T>
-		void integer_printer_helper(sink_fn_t &fn, T value, flags_t const &flags, bool inv) {
-			char head[6] = { };
-			char *phead = head;
-			char buf[numeric_limits<T>::digits + 2];
-			char *r = buf + sizeof(buf) - 1;
-			fill_str(buf, '0');
+		template <typename charT, typename T>
+		void integer_printer_helper(sink_fn_t<charT> &fn, T value, flags_t const &flags, bool inv) {
+			charT head[6] = { };
+			charT *phead = head;
+			charT buf[numeric_limits<T>::digits + 2];
+			charT *r = array_end(buf) - 1;
+			std::fill(array_begin(buf), array_end(buf), NTFMT_CHR_ZERO);
 			*r = 0;
 			unsigned const prec = flags.prec_enable ? flags.precision : 0;
 
 			if (value != 0 || !flags.prec_enable || prec != 0) {
-				if (inv) *phead++ = '-';
-				else if (flags.plus) *phead++ = '+';
-				else if (flags.space) *phead++ = ' ';
+				if (inv) *phead++ = NTFMT_CHR_MINUS;
+				else if (flags.plus) *phead++ = NTFMT_CHR_PLUS;
+				else if (flags.space) *phead++ = NTFMT_CHR_SPACE;
 
 				if (flags.alter) {
 					if (flags.radix != 10) {
-						*phead++ = '0';
-						if (flags.radix == 16) *phead++ = flags.capital ? 'X' : 'x';
-						if (flags.radix == 2) *phead++ = flags.capital ? 'B' : 'b';
+						*phead++ = NTFMT_CHR_ZERO;
+						if (flags.radix == 16) *phead++ = flags.capital ? NTFMT_CH_LIT('X') : NTFMT_CH_LIT('x');
+						if (flags.radix == 2) *phead++ = flags.capital ? NTFMT_CH_LIT('B') : NTFMT_CH_LIT('b');
 					}
 				}
 
 				while (value) {
-					char const c = hexstr[value%flags.radix];
-					*--r = flags.capital ? static_cast<char>(toupper(c)) : c;
+					charT const c = to_hexstr<charT>(static_cast<unsigned>(value%flags.radix));
+					*--r = flags.capital ? gtoupper(c) : c;
 					value /= flags.radix;
 				}
 			}
-			size_t const rl = strlen(r);
-			size_t const wid = strlen(head) + (rl < prec ? prec : rl);
-			if (!flags.minus) for (size_t n = wid; n < flags.width; ++n) fn(' ');
+			size_t const rl = gstrlen(r);
+			size_t const wid = gstrlen(head) + (rl < prec ? prec : rl);
+			if (!flags.minus) for (size_t n = wid; n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
 			fn(head);
-			for (size_t n = rl; n < prec; ++n) fn('0');
+			for (size_t n = rl; n < prec; ++n) fn(NTFMT_CHR_ZERO);
 			fn(r);
-			if (flags.minus) for (size_t n = wid; n < flags.width; ++n) fn(' ');
+			if (flags.minus) for (size_t n = wid; n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
 		}
 
 		template <typename T>
@@ -217,8 +244,8 @@ namespace ntfmt {
 		inline typename make_unsigned<T>::type exact_abs(T const &value, typename enable_if< is_signed<T> >::type * = 0) { return abs(value); }
 		template <typename T>
 		inline T exact_abs(T const &value, typename enable_if< is_unsigned<T> >::type * = 0) { return value; }
-		template <typename T>
-		inline void integer_printer(sink_fn_t &fn, T const &value, flags_t const &flags) {
+		template <typename charT, typename T>
+		inline void integer_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags) {
 			typedef typename make_unsigned<T>::type unsigned_type;
 			integer_printer_helper(fn, exact_abs(value), flags, is_negative_value(value));
 		}
@@ -232,63 +259,70 @@ namespace ntfmt {
 		template <typename T> struct is_usual_unsigned_type: and_< is_unsigned<T>, is_usual_integral_type<T> > { };
 		template <typename T> struct is_usual_signed_type: and_< is_signed<T>, is_usual_integral_type<T> > { };
 
-		template <typename T>
-		inline void default_printer(sink_fn_t &fn, T const &value, flags_t const &flags, typename enable_if< is_usual_unsigned_type<T> >::type * = 0) {
-			integer_printer<typename if_c<sizeof(T) <= sizeof(unsigned long), unsigned long, T>::type>(fn, value, flags);
+		template <typename charT, typename T>
+		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_usual_unsigned_type<T> >::type * = 0) {
+			integer_printer<charT, typename if_c<sizeof(T) <= sizeof(unsigned long), unsigned long, T>::type>(fn, value, flags);
 		}
-		template <typename T>
-		inline void default_printer(sink_fn_t &fn, T const &value, flags_t const &flags, typename enable_if< is_usual_signed_type<T> >::type * = 0) {
-			integer_printer<typename if_c<sizeof(T) <= sizeof(long), long, T>::type>(fn, value, flags);
+		template <typename charT, typename T>
+		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_usual_signed_type<T> >::type * = 0) {
+			integer_printer<charT, typename if_c<sizeof(T) <= sizeof(long), long, T>::type>(fn, value, flags);
 		}
-		template <typename T>
-		inline void default_printer(sink_fn_t &fn, T const &value, flags_t const &flags, typename enable_if< is_pointer<T> >::type * = 0) {
-			integer_printer<uintptr_t>(fn, reinterpret_cast<uintptr_t>(value), flags);
-		}
-
-		template <typename T>
-		void float_printer(sink_fn_t &fn, T const &value, const flags_t &flags);
-		template <typename T>
-		inline void default_printer(sink_fn_t &fn, T const &value, flags_t const &flags, typename enable_if< is_floating_point<T> >::type * = 0) {
-			float_printer<typename if_c<sizeof(T) <= sizeof(double), double, T>::type>(fn, value, flags);
+		template <typename charT, typename T>
+		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_pointer<T> >::type * = 0) {
+			integer_printer<charT, uintptr_t>(fn, reinterpret_cast<uintptr_t>(value), flags);
 		}
 
-		template <typename T>
-		inline void default_printer(sink_fn_t &fn, T const &value, flags_t const &flags, typename enable_if< is_boolean_type<T> >::type * = 0) {
+		template <typename charT, typename T>
+		void float_printer(sink_fn_t<charT> &fn, T const &value, const flags_t &flags);
+		template <typename charT, typename T>
+		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_floating_point<T> >::type * = 0) {
+			float_printer<charT, typename if_c<sizeof(T) <= sizeof(double), double, T>::type>(fn, value, flags);
+		}
+
+		template <typename charT> struct bool_str;
+		template <>
+		struct bool_str<char> {
+			static char const *str(bool const b) {
+				static char const true_str[] = "true";
+				static char const false_str[] = "false";
+				return b ? true_str : false_str;
+			}
+		};
+		template <>
+		struct bool_str<wchar_t> {
+			static wchar_t const *str(bool const b) {
+				static wchar_t const true_str[] = L"true";
+				static wchar_t const false_str[] = L"false";
+				return b ? true_str : false_str;
+			}
+		};
+		template <typename charT, typename T>
+		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_boolean_type<T> >::type * = 0) {
 			if (flags.alter) {
-				char const *const s = value ? "true" : "false";
-				size_t const l = strlen(s);
+				charT const *const s = bool_str<charT>::str(value);
+				size_t const l = gstrlen(s);
 				if (flags.minus) fn(s);
-				for (size_t n = l; n < flags.width; ++n) fn(' ');
+				for (size_t n = l; n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
 				if (!flags.minus) fn(s);
 			} else {
-				if (!flags.minus) for (unsigned n = 1; n < flags.width; ++n) fn(' ');
-				fn(value ? '1' : '0');
-				if (flags.minus) for (unsigned n = 1; n < flags.width; ++n) fn(' ');
+				default_printer(fn, static_cast<unsigned>(value), flags);
 			}
 		}
 
-		template <typename T>
-		inline void default_printer(sink_fn_t &fn, T const value, flags_t const &flags, typename enable_if< is_character_type<T> >::type * = 0) {
+		template <typename charT>
+		inline void default_printer(sink_fn_base &fn, charT const value, flags_t const &flags, typename enable_if< is_character_type<charT> >::type * = 0) {
 			if (flags.minus) fn(value);
-			for (unsigned n = 1; n < flags.width; ++n) fn(' ');
+			for (unsigned n = 1; n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
 			if (!flags.minus) fn(value);
 		}
 
 		template <typename T, typename baseT>
 		struct is_c_string: is_convertible<T, baseT const *> { };
-		template <typename T>
-		inline void cstr_printer(sink_fn_t &fn, T const *const value, flags_t const &flags) {
+		template <typename charT, typename T>
+		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_c_string<T, charT> >::type * = 0) {
 			if (!flags.minus) fn(value);
-			for (size_t n = gstrlen(value); n < flags.width; ++n) fn(' ');
+			for (size_t n = gstrlen(value); n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
 			if (flags.minus) fn(value);
-		}
-		template <typename T>
-		inline void default_printer(sink_fn_t &fn, T const &value, flags_t const &flags, typename enable_if< is_c_string<T, char> >::type * = 0) {
-			cstr_printer<char>(fn, value, flags);
-		}
-		template <typename T>
-		inline void default_printer(sink_fn_t &fn, T const &value, flags_t const &flags, typename enable_if< is_c_string<T, wchar_t> >::type * = 0) {
-			cstr_printer<wchar_t>(fn, value, flags);
 		}
 
 	}
@@ -308,21 +342,22 @@ namespace ntfmt {
 	template <typename Fn>
 	struct sink_t {
 #ifdef BOOST_HAS_VARIADIC_TMPL
-		void format() const { }
+		sink_t &format() { return *this; }
+		sink_t const &format() const { return *this; }
 		template <typename A1, typename... Args>
-		void format(A1 const &a1, Args const &...args) {
+		sink_t &format(A1 const &a1, Args const &...args) {
 			fmt(a1).print(fn);
-			format(args...);
+			return format(args...);
 		}
 		template <typename A1, typename... Args>
-		void format(fmt_t<A1> const &a1, Args const &...args) {
+		sink_t &format(fmt_t<A1> const &a1, Args const &...args) {
 			a1.print(fn);
-			format(args...);
+			return format(args...);
 		}
 		template <typename A1, typename... Args>
-		void format(fmt_t<A1> const &a1, Args const &...args) const { const_cast<sink_t *>(this)->format(a1, std::forward<Args>(args)...); }
+		sink_t const &format(fmt_t<A1> const &a1, Args const &...args) const { return const_cast<sink_t *>(this)->format(a1).format(std::forward<Args>(args)...); }
 		template <typename A1, typename... Args>
-		void format(A1 const &a1, Args const &...args) const { const_cast<sink_t *>(this)->format(a1, std::forward<Args>(args)...); }
+		sink_t const &format(A1 const &a1, Args const &...args) const { return const_cast<sink_t *>(this)->format(a1).format(std::forward<Args>(args)...); }
 		template <typename... Args>
 		sink_t(Args &&...args): fn(std::forward<Args>(args)...) { }
 #else
@@ -356,12 +391,12 @@ namespace ntfmt {
 #undef rARG
 #endif
 		template <typename T>
-		sink_t const &operator <<(fmt_t<T> const &v) {
+		sink_t &operator <<(fmt_t<T> const &v) {
 			v.print(fn);
 			return *this;
 		}
 		template <typename T>
-		sink_t const &operator <<(T const &v) {
+		sink_t &operator <<(T const &v) {
 			fmt(v).print(fn);
 			return *this;
 		}

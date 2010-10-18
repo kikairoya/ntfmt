@@ -16,6 +16,9 @@ int main() {
 		// pass std::(w)string & to (w)sink_string.
 		ntfmt::sink_string(s) << 3248190 << '\n';
 		std::cout << s;
+		std::wstring ws;
+		ntfmt::sink_wstring(ws) << 932. << L'\n';
+		std::wcout << ws;
 	}
 	{
 		std::stringstream ss;
