@@ -9,14 +9,15 @@
 #include <limits>
 #include <utility>
 #include <boost/utility/enable_if.hpp>
+#include <boost/mpl/if.hpp>
+#include <boost/mpl/logical.hpp>
+#include <boost/type_traits/integral_constant.hpp>
 #include <boost/type_traits/is_convertible.hpp>
 #include <boost/type_traits/is_unsigned.hpp>
 #include <boost/type_traits/is_signed.hpp>
 #include <boost/type_traits/is_floating_point.hpp>
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/type_traits/make_unsigned.hpp>
-#include <boost/mpl/if.hpp>
-#include <boost/mpl/logical.hpp>
 
 #include <boost/preprocessor.hpp>
 
@@ -26,18 +27,45 @@ namespace ntfmt {
 		using std::abs;
 #endif
 		using std::numeric_limits;
-		using boost::mpl::bool_;
 		using boost::mpl::and_;
 		using boost::mpl::or_;
 		using boost::mpl::not_;
 		using boost::mpl::if_c;
 		using boost::enable_if;
+		using boost::integral_constant;
+		using boost::true_type;
+		using boost::false_type;
 		using boost::is_convertible;
 		using boost::is_unsigned;
 		using boost::is_signed;
 		using boost::is_floating_point;
 		using boost::is_pointer;
 		using boost::make_unsigned;
+
+		static char const hexstr[] = "0123456789abcdefg";
+		static wchar_t const whexstr[] = L"0123456789abcdefg";
+
+		template <typename charT>
+		inline long gstrtol(charT const *, charT const **, int);
+		template <>
+		inline long gstrtol<char>(char const *nptr, char const **endp, int base) { return strtol(nptr, (char **)endp, base); }
+		template <>
+		inline long gstrtol<wchar_t>(wchar_t const *nptr, wchar_t const **endp, int base) { return wcstol(nptr, (wchar_t **)endp, base); }
+
+		template <typename charT>
+		inline size_t gstrlen(charT const *const s);
+		template <>
+		inline size_t gstrlen<char>(char const *const s) { return strlen(s); }
+		template <>
+		inline size_t gstrlen<wchar_t>(wchar_t const *const s) { return wcslen(s); }
+
+		template <typename charT, char C, wchar_t W>
+		struct char_literal;
+		template <char C, wchar_t W>
+		struct char_literal<char, C, W>: integral_constant<char, C> { };
+		template <char C, wchar_t W>
+		struct char_literal<wchar_t, C, W>: integral_constant<wchar_t, W> { };
+#define NTFMT_CH_LIT(c) char_literal<charT, c, L##c>::value
 
 		template <typename charT>
 		struct sink_strbuf_fn_t: sink_fn_t {
@@ -48,7 +76,7 @@ namespace ntfmt {
 			int operator ()(charT c) { if (p < buf+size-1) { *p++ = c; *p = 0; return c; } return -1; }
 			charT *const buf;
 			charT *p;
-			size_t constT size;
+			size_t const size;
 		};
 
 		inline flags_t const default_flags() {
@@ -60,17 +88,17 @@ namespace ntfmt {
 		template <typename charT>
 		flags_t const decode_flags(charT const *fmtstr) {
 			flags_t f = default_flags();
-			if (!fmtstr || *fmtstr++!='%') return f;
+			if (!fmtstr || *fmtstr++!=NTFMT_CH_LIT('%')) return f;
 		cont:
 			if (!*fmtstr) return default_flags();
-			if (*fmtstr=='#') { f.alter = 1; ++fmtstr; goto cont; }
-			if (*fmtstr=='0' && !f.minus) { f.zero = 1; ++fmtstr; goto cont; }
-			if (*fmtstr=='-') { f.minus = 1; f.zero = 0; ++fmtstr; goto cont; }
-			if (*fmtstr==' ' && !f.plus) { f.space = 1; ++fmtstr; goto cont; }
-			if (*fmtstr=='+') { f.plus = 1; f.space = 0; ++fmtstr; goto cont; }
+			if (*fmtstr==NTFMT_CH_LIT('#')) { f.alter = 1; ++fmtstr; goto cont; }
+			if (*fmtstr==NTFMT_CH_LIT('0') && !f.minus) { f.zero = 1; ++fmtstr; goto cont; }
+			if (*fmtstr==NTFMT_CH_LIT('-')) { f.minus = 1; f.zero = 0; ++fmtstr; goto cont; }
+			if (*fmtstr==NTFMT_CH_LIT(' ') && !f.plus) { f.space = 1; ++fmtstr; goto cont; }
+			if (*fmtstr==NTFMT_CH_LIT('+')) { f.plus = 1; f.space = 0; ++fmtstr; goto cont; }
 			{
-				char const *const p = fmtstr;
-				f.width = strtol(p, (char **)&fmtstr, 10); // ugly cast to char **
+				charT const *const p = fmtstr;
+				f.width = static_cast<int>(gstrtol(p, &fmtstr, 10));
 				f.width_enable = (p != fmtstr);
 			}
 			if (!*fmtstr) return default_flags();
@@ -78,60 +106,60 @@ namespace ntfmt {
 				f.prec_enable = 1;
 				++fmtstr;
 				if (!*fmtstr) return default_flags();
-				char const *const p = fmtstr;
-				int const n = strtol(p, (char **)&fmtstr, 10);
+				charT const *const p = fmtstr;
+				int const n = static_cast<int>(gstrtol(p, &fmtstr, 10));
 				f.precision = (n<=0) ? 0 : n;
 				f.prec_enable = (p != fmtstr);
 			}
 		skipping:
 			if (!*fmtstr) return default_flags();
 			switch (*fmtstr) {
-			case 'l':
-			case 'L':
-			case 'h':
-			case 'q':
-			case 'j':
-			case 'z':
-			case 't':
+			case NTFMT_CH_LIT('l'):
+			case NTFMT_CH_LIT('L'):
+			case NTFMT_CH_LIT('h'):
+			case NTFMT_CH_LIT('q'):
+			case NTFMT_CH_LIT('j'):
+			case NTFMT_CH_LIT('z'):
+			case NTFMT_CH_LIT('t'):
 				++fmtstr;
 				goto skipping;
-			case 'c':
-			case 's':
+			case NTFMT_CH_LIT('c'):
+			case NTFMT_CH_LIT('s'):
 				f.character = 1;
 				break;
-			case 'i':
-			case 'd':
-			case 'u':
+			case NTFMT_CH_LIT('i'):
+			case NTFMT_CH_LIT('d'):
+			case NTFMT_CH_LIT('u'):
 				break;
-			case 'X':
+			case NTFMT_CH_LIT('X'):
 				f.capital = 1;
-			case 'x': // fallthrough
-			case 'p':
+			case NTFMT_CH_LIT('x'): // fallthrough
+			case NTFMT_CH_LIT('p'):
 				f.radix = 16;
 				break;
-			case 'o':
+			case NTFMT_CH_LIT('o'):
 				f.radix = 8;
 				break;
-			case 'b':
+			case NTFMT_CH_LIT('b'):
 				f.radix = 2;
 				break;
-			case 'E':
+			case NTFMT_CH_LIT('E'):
 				f.capital = 1;
-			case 'e': // fallthrough
+			case NTFMT_CH_LIT('e'): // fallthrough
 				f.exponential = 1;
 				break;
-			case 'F':
+			case NTFMT_CH_LIT('F'):
 				f.capital = 1;
-			case 'f': // fallthrough
+			case NTFMT_CH_LIT('f'): // fallthrough
 				f.fixed = 1;
 				break;
-			case 'G':
+			case NTFMT_CH_LIT('G'):
 				f.capital = 1;
-			case 'g': // fallthrough
+			case NTFMT_CH_LIT('g'): // fallthrough
 				break;
-			case 'A':
+			case NTFMT_CH_LIT('A'):
 				f.capital = 1;
-			case 'a': // fallthrough
+			case NTFMT_CH_LIT('a'): // fallthrough
 				f.exponential = 1;
 				f.radix = 16;
 				break;
@@ -194,11 +222,11 @@ namespace ntfmt {
 			integer_printer_helper(fn, exact_abs(value), flags, is_negative_value(value));
 		}
 
-		template <typename T> struct is_character_type: bool_<false> { };
-		template <> struct is_character_type<char>: bool_<true> { };
-		template <> struct is_character_type<wchar_t>: bool_<true> { };
-		template <typename T> struct is_boolean_type: bool_<false> { };
-		template <> struct is_boolean_type<bool>: bool_<true> { };
+		template <typename T> struct is_character_type: false_type { };
+		template <> struct is_character_type<char>: true_type { };
+		template <> struct is_character_type<wchar_t>: true_type { };
+		template <typename T> struct is_boolean_type: false_type { };
+		template <> struct is_boolean_type<bool>: true_type { };
 		template <typename T> struct is_usual_integral_type: not_< or_< is_character_type<T>, is_boolean_type<T> > > { };
 		template <typename T> struct is_usual_unsigned_type: and_< is_unsigned<T>, is_usual_integral_type<T> > { };
 		template <typename T> struct is_usual_signed_type: and_< is_signed<T>, is_usual_integral_type<T> > { };
@@ -247,14 +275,6 @@ namespace ntfmt {
 
 		template <typename T, typename baseT>
 		struct is_c_string: is_convertible<T, baseT const *> { };
-		template <typename charT>
-		inline size_t gstrlen(charT const *const s);
-		template <>
-		inline size_t gstrlen<char>(char const *const s) { return strlen(s); }
-#ifndef __CYGWIN__
-		template <>
-		inline size_t gstrlen<wchar_t>(wchar_t const *const s) { return wcslen(s); }
-#endif
 		template <typename T>
 		inline void cstr_printer(sink_fn_t &fn, T const *const value, flags_t const &flags) {
 			if (!flags.minus) fn(value);
@@ -275,6 +295,7 @@ namespace ntfmt {
 	template <typename T>
 	struct fmt_t {
 		fmt_t(T const &v, char const *const f): value(v), flags(detail::decode_flags(f)) { }
+		fmt_t(T const &v, wchar_t const *const f): value(v), flags(detail::decode_flags(f)) { }
 		fmt_t(T const &v, flags_t const &f): value(v), flags(f) { }
 		template <typename Fn>
 		void print(Fn &fn) const { detail::default_printer(fn, value, flags); }

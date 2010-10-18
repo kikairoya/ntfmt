@@ -2,6 +2,7 @@
 #define NTFMT_FWD_HPP_
 
 #include "ntfmt_compat.hpp"
+#include <wchar.h>
 #include <boost/cstdint.hpp>
 
 namespace ntfmt {
@@ -33,9 +34,11 @@ namespace ntfmt {
 	}
 
 	template <typename T>
-	inline fmt_t<T> fmt(T const &v, char const *const f = 0) { return fmt_t<T>(v, f); }
+	inline fmt_t<T> fmt(T const &v, char const *const f) { return fmt_t<T>(v, f); }
 	template <typename T>
-	inline fmt_t<T> fmt(T const &v, flags_t const &f) { return fmt_t<T>(v, f); }
+	inline fmt_t<T> fmt(T const &v, wchar_t const *const f) { return fmt_t<T>(v, f); }
+	template <typename T>
+	inline fmt_t<T> fmt(T const &v, flags_t const &f = detail::default_flags()) { return fmt_t<T>(v, f); }
 
 	template <typename Fn>
 	struct sink_t;
@@ -71,9 +74,6 @@ namespace ntfmt {
 	template <typename Fn> \
 	void ::ntfmt::fmt_t<TYPE>::print(Fn &fn) const
 
-	namespace detail {
-		static char const hexstr[] = "0123456789abcdefg";
-	}
 }
 
 #endif

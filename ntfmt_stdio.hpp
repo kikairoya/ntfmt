@@ -3,7 +3,6 @@
 
 #include "ntfmt.hpp"
 #include <stdio.h>
-#include <wchar.h>
 
 namespace ntfmt {
 	namespace detail {

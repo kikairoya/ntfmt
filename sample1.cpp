@@ -17,9 +17,9 @@ int main() {
 	// print unsigned octal
 	sink_stdout() << fmt<unsigned>(-06471, "%o") << '\n';
 	// print float
-	sink_stdout() << 285.6723 << '\n';
+	sink_stdout() << fmt(285.6723) << '\n'; // if format string suppressed, use default flags.
 	// print float with scientific format
-	sink_stdout() << fmt(853.842223, "%e") << '\n';
+	sink_stdout() << fmt(853.842223, L"%e") << '\n'; // format string can be wide-character string
 	// print float with fixed format
 	sink_stdout() << fmt(0.74266684, "%.4f") << '\n';
 	// print float with generic format
