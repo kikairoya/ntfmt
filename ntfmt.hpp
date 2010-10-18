@@ -4,8 +4,6 @@
 #include "ntfmt_fwd.hpp"
 
 #include <string.h>
-#include <ctype.h>
-#include <wctype.h>
 #include <cstdlib>
 #include <string>
 #include <algorithm>
@@ -54,36 +52,27 @@ namespace ntfmt {
 		template <typename T, size_t N>
 		struct array_elements<T [N]>: integral_constant<size_t, N> { };
 		template <typename charT> struct hexstr;
-		template <> struct hexstr<char> { static char const (&str())[18] { return "0123456789abcdefg"; } };
-		template <> struct hexstr<wchar_t> { static wchar_t const (&str())[18] { return L"0123456789abcdefg"; } };
+		template <>
+		struct hexstr<char> {
+			static char const (&str(bool const capital))[18] {
+				if (capital) return "0123456789ABCDEFG";
+				return "0123456789abcdefg";
+			}
+		};
+		template <>
+		struct hexstr<wchar_t> {
+			static wchar_t const (&str(bool const capital))[18] {
+				if (capital) return L"0123456789ABCDEFG";
+				return L"0123456789abcdefg";
+			}
+		};
 		template <typename charT>
-		inline charT to_hexstr(unsigned const v) { return hexstr<charT>::str()[v]; }
+		inline charT to_hexstr(unsigned const v, bool const capital) { return hexstr<charT>::str(capital)[v]; }
 		template <typename charT>
-		inline ptrdiff_t from_hexstr(charT c) {
+		inline ptrdiff_t from_hexstr(charT const c, bool const capital) {
 			typedef hexstr<charT> hex;
-			return std::lower_bound(array_begin(hex::str()), array_end(hex::str()), c) - array_begin(hex::str());
+			return std::lower_bound(array_begin(hex::str(capital)), array_end(hex::str(capital)), c) - array_begin(hex::str(capital));
 		}
-
-		template <typename charT>
-		inline long gstrtol(charT const *, charT const **, int);
-		template <>
-		inline long gstrtol<char>(char const *nptr, char const **endp, int base) { return strtol(nptr, (char **)endp, base); }
-		template <>
-		inline long gstrtol<wchar_t>(wchar_t const *nptr, wchar_t const **endp, int base) { return wcstol(nptr, (wchar_t **)endp, base); }
-
-		template <typename charT>
-		inline size_t gstrlen(charT const *const s);
-		template <>
-		inline size_t gstrlen<char>(char const *const s) { return strlen(s); }
-		template <>
-		inline size_t gstrlen<wchar_t>(wchar_t const *const s) { return wcslen(s); }
-
-		template <typename charT>
-		inline charT gtoupper(charT const c);
-		template <>
-		inline char gtoupper<char>(char const c) { return static_cast<char>(toupper(c)); }
-		template <>
-		inline wchar_t gtoupper<wchar_t>(wchar_t const c) { return towupper(c); }
 
 		template <typename charT, char C, wchar_t W>
 		struct char_literal;
@@ -99,6 +88,22 @@ namespace ntfmt {
 #define NTFMT_CHR_DOT NTFMT_CH_LIT('.')
 
 		template <typename charT>
+		inline size_t gstrlen(charT const *const s) { return std::char_traits<charT>::length(s); }
+
+		template <typename charT>
+		inline bool gisdigit(charT const c) { return NTFMT_CH_LIT('0') <= c && c <= NTFMT_CH_LIT('9'); }
+		template <typename charT>
+		int extract_int(charT const *nptr, charT const **endp) {
+			int ret = 0;
+			while (gisdigit(*nptr)) {
+				ret *= 10;
+				ret += *nptr++ - NTFMT_CHR_ZERO;
+			}
+			*endp = nptr;
+			return ret;
+		}
+
+		template <typename charT>
 		struct sink_strbuf_fn_t: sink_fn_t<charT> {
 			template <size_t N>
 			sink_strbuf_fn_t(charT (*const &buf)[N]): buf(*buf), p(*buf), size(N) { }
@@ -110,18 +115,33 @@ namespace ntfmt {
 			size_t const size;
 		};
 
+
 		inline flags_t const default_flags() {
-			flags_t f[1] = { };
-			f[0].radix = 10;
-			return f[0];
+			flags_t f;
+			memset(&f, 0, sizeof(f));
+			f.radix = 10;
+			return f;
+		}
+		inline packed_flags_t const default_packed_flags() {
+			packed_flags_t f;
+			memset(&f, 0, sizeof(f));
+			f.radix = 10;
+			return f;
+		}
+		inline unpacked_flags_t const default_unpacked_flags() {
+			unpacked_flags_t f;
+			memset(&f, 0, sizeof(f));
+			f.radix = 10;
+			return f;
 		}
 
 		template <typename charT>
 		flags_t const decode_flags(charT const *fmtstr) {
-			flags_t f = default_flags();
+			flags_t const def_flags = default_flags();
+			unpacked_flags_t f = default_unpacked_flags();
 			if (!fmtstr || *fmtstr++!=NTFMT_CH_LIT('%')) return f;
 		cont:
-			if (!*fmtstr) return default_flags();
+			if (!*fmtstr) return def_flags;
 			if (*fmtstr==NTFMT_CH_LIT('#')) { f.alter = 1; ++fmtstr; goto cont; }
 			if (*fmtstr==NTFMT_CHR_ZERO && !f.minus) { f.zero = 1; ++fmtstr; goto cont; }
 			if (*fmtstr==NTFMT_CHR_MINUS) { f.minus = 1; f.zero = 0; ++fmtstr; goto cont; }
@@ -129,21 +149,21 @@ namespace ntfmt {
 			if (*fmtstr==NTFMT_CHR_PLUS) { f.plus = 1; f.space = 0; ++fmtstr; goto cont; }
 			{
 				charT const *const p = fmtstr;
-				f.width = static_cast<int>(gstrtol(p, &fmtstr, 10));
+				f.width = extract_int(p, &fmtstr);
 				f.width_enable = (p != fmtstr);
 			}
-			if (!*fmtstr) return default_flags();
+			if (!*fmtstr) return def_flags;
 			if (*fmtstr==NTFMT_CHR_DOT) {
 				f.prec_enable = 1;
 				++fmtstr;
-				if (!*fmtstr) return default_flags();
+				if (!*fmtstr) return def_flags;
 				charT const *const p = fmtstr;
-				int const n = static_cast<int>(gstrtol(p, &fmtstr, 10));
+				int const n = extract_int(p, &fmtstr);
 				f.precision = (n<=0) ? 0 : n;
 				f.prec_enable = (p != fmtstr);
 			}
 		skipping:
-			if (!*fmtstr) return default_flags();
+			if (!*fmtstr) return def_flags;
 			switch (*fmtstr) {
 			case NTFMT_CH_LIT('l'):
 			case NTFMT_CH_LIT('L'):
@@ -198,6 +218,8 @@ namespace ntfmt {
 			return f;
 		}
 
+		template <typename charT>
+		int fill_chr_to(sink_fn_t<charT> &fn, charT const c, size_t N) { size_t n; for (n = 0; n < N && fn(c) >= 0; ++n) ; return n; }
 		template <typename charT, typename T>
 		void integer_printer_helper(sink_fn_t<charT> &fn, T value, flags_t const &flags, bool inv) {
 			charT head[6] = { };
@@ -222,18 +244,17 @@ namespace ntfmt {
 				}
 
 				while (value) {
-					charT const c = to_hexstr<charT>(static_cast<unsigned>(value%flags.radix));
-					*--r = flags.capital ? gtoupper(c) : c;
+					*--r = to_hexstr<charT>(static_cast<unsigned>(value%flags.radix), flags.capital);
 					value /= flags.radix;
 				}
 			}
 			size_t const rl = gstrlen(r);
 			size_t const wid = gstrlen(head) + (rl < prec ? prec : rl);
-			if (!flags.minus) for (size_t n = wid; n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
+			if (!flags.minus) fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - wid);
 			fn(head);
-			for (size_t n = rl; n < prec; ++n) fn(NTFMT_CHR_ZERO);
+			fill_chr_to(fn, NTFMT_CHR_SPACE, prec - rl);
 			fn(r);
-			if (flags.minus) for (size_t n = wid; n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
+			if (flags.minus) fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - wid);
 		}
 
 		template <typename T>
@@ -300,19 +321,18 @@ namespace ntfmt {
 		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_boolean_type<T> >::type * = 0) {
 			if (flags.alter) {
 				charT const *const s = bool_str<charT>::str(value);
-				size_t const l = gstrlen(s);
 				if (flags.minus) fn(s);
-				for (size_t n = l; n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
+				fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - gstrlen(s));
 				if (!flags.minus) fn(s);
 			} else {
-				default_printer(fn, static_cast<unsigned>(value), flags);
+				default_printer(fn, static_cast<unsigned long>(value), flags);
 			}
 		}
 
 		template <typename charT>
-		inline void default_printer(sink_fn_base &fn, charT const value, flags_t const &flags, typename enable_if< is_character_type<charT> >::type * = 0) {
+		inline void default_printer(sink_fn_t<charT> &fn, charT const value, flags_t const &flags, typename enable_if< is_character_type<charT> >::type * = 0) {
 			if (flags.minus) fn(value);
-			for (unsigned n = 1; n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
+			fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - 1);
 			if (!flags.minus) fn(value);
 		}
 
@@ -321,7 +341,7 @@ namespace ntfmt {
 		template <typename charT, typename T>
 		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_c_string<T, charT> >::type * = 0) {
 			if (!flags.minus) fn(value);
-			for (size_t n = gstrlen(value); n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
+			fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - gstrlen(value));
 			if (flags.minus) fn(value);
 		}
 

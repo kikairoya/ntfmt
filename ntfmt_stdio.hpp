@@ -6,13 +6,15 @@
 
 namespace ntfmt {
 	namespace detail {
+		inline int gfputs(char const *const s, FILE *const fp) { return fputs(s, fp); }
+		inline int gfputc(char const c, FILE *const fp) { return fputc(c, fp); }
+		inline int gfputs(wchar_t const *const s, FILE *const fp) { return fputws(s, fp); }
+		inline int gfputc(wchar_t const c, FILE *const fp) { return fputwc(c, fp); }
 		template <typename charT>
 		struct sink_cfile_fn_t: sink_fn_t<charT> {
 			sink_cfile_fn_t(FILE *const file): fp(file) { }
-			int operator ()(char const *s) { return fputs(s, fp); }
-			int operator ()(char c) { return fputc(c, fp); }
-			int operator ()(wchar_t const *s) { return fputws(s, fp); }
-			int operator ()(wchar_t c) { return fputwc(c, fp); }
+			int operator ()(charT const *s) { return gfputs(s, fp); }
+			int operator ()(charT c) { return gfputc(c, fp); }
 		private:
 			FILE *const fp;
 		};

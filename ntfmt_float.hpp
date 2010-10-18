@@ -45,10 +45,10 @@ namespace ntfmt {
 		inline T get_successor(T const &v) { return nextafter(v, +numeric_limits<T>::infinity()); }
 
 		template <typename charT>
-		inline void inc_strnum(charT *const strnum, unsigned const base, unsigned const col) {
-			if (strnum[col]++ == to_hexstr<charT>(base-1)) {
-				strnum[col] = to_hexstr<charT>(0);
-				inc_strnum(strnum, base, col - 1);
+		inline void inc_strnum(charT *const strnum, unsigned const base, unsigned const col, bool const capital) {
+			if (strnum[col]++ == to_hexstr<charT>(base-1, capital)) {
+				strnum[col] = to_hexstr<charT>(0, capital);
+				inc_strnum(strnum, base, col - 1, capital);
 			}
 		}
 
@@ -90,10 +90,12 @@ namespace ntfmt {
 			typedef typename boost::integral_promotion<typename select_larger_type<higher_type, lower_type>::type>::type return_type;
 		};
 		template <typename charT, typename T>
-		typename dtoa_traits<T>::return_type dtoa(charT *const out, T v, int prec, unsigned const base) {
+		typename dtoa_traits<T>::return_type dtoa(charT *const out, T v, int prec, flags_t const &flags) {
 			if (prec < 0) prec = 0;
 			if (prec > numeric_limits<T>::digits10) prec = numeric_limits<T>::digits10;
 			typedef typename dtoa_traits<T>::return_type return_type;
+			unsigned const base = flags.radix;
+			bool const capital = flags.capital;
 			v = fabs(v);
 			return_type const k = ilog(base, get_successor(v));
 			
@@ -106,11 +108,11 @@ namespace ntfmt {
 				for (charT *ptr = array_begin(buf) + 1; ptr < end; ++ptr) {
 					q *= base;
 					T const fq = floor(q);
-					*ptr = to_hexstr<charT>(static_cast<unsigned>(fq)%base);
+					*ptr = to_hexstr<charT>(static_cast<unsigned>(fq)%base, capital);
 					q -= fq;
 				}
 			}
-			if (static_cast<unsigned>(from_hexstr(buf[prec+1])) >= base/2) inc_strnum(buf, base, prec);
+			if (static_cast<unsigned>(from_hexstr(buf[prec+1], capital)) >= base/2) inc_strnum(buf, base, prec, capital);
 			
 			if (ntfmt_unlikely(buf[0] != NTFMT_CHR_ZERO)) {
 				gstrncpy(out, buf, prec+1);
@@ -173,7 +175,7 @@ namespace ntfmt {
 			bool const exponential = flags.exponential || ( !flags.fixed && ((l < -4) || (l > prec)));
 			charT buf[numeric_limits<T>::digits10 + 8];
 			if (exponential) {
-				int const e = dtoa<charT, T>(buf, value, prec + flags.exponential, flags.radix);
+				int const e = dtoa<charT, T>(buf, value, prec + flags.exponential, flags);
 				if (!flags.exponential && !flags.alter) {
 					charT *p = buf + gstrlen(buf) - 1;
 					while (*p == NTFMT_CHR_ZERO) *p-- = 0; 
@@ -182,7 +184,7 @@ namespace ntfmt {
 				buf[0] = buf[1] && (prec!=0 || flags.alter) ? NTFMT_CHR_DOT : 0;
 
 				size_t const wid = gstrlen(head) + gstrlen(buf) + 5;
-				if (!flags.minus) for (size_t n = wid; n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
+				if (!flags.minus) fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - wid);
 				fn(head);
 				fn(buf);
 				fn(flags.capital ? NTFMT_CH_LIT('E') : NTFMT_CH_LIT('e'));
@@ -191,21 +193,14 @@ namespace ntfmt {
 				ff.prec_enable = 1;
 				ff.precision = 3;
 				ff.plus = 1;
-				integer_printer(fn, e-1, ff);
-				if (flags.minus) for (size_t n = wid; n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
+				integer_printer(fn, static_cast<long>(e-1), ff);
+				if (flags.minus) fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - wid);
 			} else {
-				int const e = dtoa<charT, T>(buf, value, prec + (flags.fixed ? l : 0), flags.radix);
+				int const e = dtoa<charT, T>(buf, value, prec + (flags.fixed ? l : 0), flags);
 				if (e < 1) {
 					*phead++ = NTFMT_CHR_ZERO;
 					*phead++ = NTFMT_CHR_DOT;
 					if (e <= -prec) buf[0] = 0;
-					int const lim = e < -prec ? prec : -e;
-					size_t const wid = gstrlen(head) + gstrlen(buf) + lim;
-					if (!flags.minus) for (size_t n = wid; n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
-					fn(head);
-					for (int n = 0; n < lim; ++n) fn(NTFMT_CHR_ZERO);
-					fn(buf);
-					if (flags.minus) for (size_t n = wid; n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
 				} else {
 					std::copy_backward(array_begin(buf)+e, array_begin(buf)+gstrlen(buf), array_begin(buf)+e+1);
 					buf[e] = NTFMT_CHR_DOT;
@@ -214,12 +209,15 @@ namespace ntfmt {
 						while (*p == NTFMT_CHR_ZERO) *p-- = 0;
 						if (*p == NTFMT_CHR_DOT) *p-- = 0;
 					}
-					size_t const wid = gstrlen(head) + gstrlen(buf);
-					if (!flags.minus) for (size_t n = wid; n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
-					fn(head);
-					fn(buf);
-					if (flags.minus) for (size_t n = wid; n < flags.width; ++n) fn(NTFMT_CHR_SPACE);
 				}
+				int const lim = e < -prec ? prec : -e;
+				size_t const wid = gstrlen(head) + gstrlen(buf) + lim;
+				
+				if (!flags.minus) fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - wid);
+				fn(head);
+				fill_chr_to(fn, NTFMT_CHR_ZERO, lim);
+				fn(buf);
+				if (flags.minus) fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - wid);
 			}
 		}
 	}

@@ -6,7 +6,7 @@
 #include <boost/cstdint.hpp>
 
 namespace ntfmt {
-	struct flags_t {
+	struct packed_flags_t {
 		unsigned minus: 1;
 		unsigned space: 1;
 		unsigned alter: 1;
@@ -22,6 +22,31 @@ namespace ntfmt {
 		unsigned fixed: 1;
 		unsigned width: 8;
 	};
+	struct unpacked_flags_t {
+		short precision;
+		short radix;
+		short width;
+		bool minus;
+		bool space;
+		bool alter;
+		bool zero;
+		bool plus;
+		bool capital;
+		bool character;
+		bool prec_enable;
+		bool width_enable;
+		bool exponential;
+		bool fixed;
+		operator packed_flags_t() const {
+			packed_flags_t f = { minus, space, alter, zero, plus, capital, character, prec_enable, precision, radix, width_enable, exponential, fixed, width };
+			return f;
+		}
+	};
+#ifdef NTFMT_USE_PACKED_FLAGS
+	typedef packed_flags_t flags_t;
+#else
+	typedef unpacked_flags_t flags_t;
+#endif
 
 	template <typename T>
 	struct fmt_t;
