@@ -74,6 +74,7 @@ namespace ntfmt {
 			sink_strbuf_fn_t(charT *const buf, size_t const size): buf(buf), p(buf), size(size) { }
 			int operator ()(charT const *s) { for (int n=0; *s && p < buf+size-1; ++n, *p++ = *s++, *p = 0) ; }
 			int operator ()(charT c) { if (p < buf+size-1) { *p++ = c; *p = 0; return c; } return -1; }
+		private:
 			charT *const buf;
 			charT *p;
 			size_t const size;
@@ -299,6 +300,7 @@ namespace ntfmt {
 		fmt_t(T const &v, flags_t const &f): value(v), flags(f) { }
 		template <typename Fn>
 		void print(Fn &fn) const { detail::default_printer(fn, value, flags); }
+	private:
 		T const &value;
 		flags_t const flags;
 	};
@@ -335,7 +337,7 @@ namespace ntfmt {
 #define MAKE_RC_SEQ(z,n,t) ((r)(c))
 #define CTOR(z,n,t) \
 	BOOST_PP_SEQ_FOR_EACH_PRODUCT(CTOR_HELPER, BOOST_PP_REPEAT(BOOST_PP_ADD(n,1),MAKE_RC_SEQ,0))
-		BOOST_PP_REPEAT(6,CTOR,0)
+		BOOST_PP_REPEAT(6,CTOR,0);
 		/* here generates
 		  template <typename A0> sink_t(A0 &a0): fn(a0) { }
 		  template <typename A0> sink_t(A0 const &a0): fn(a0) { }
@@ -353,8 +355,6 @@ namespace ntfmt {
 #undef cARG
 #undef rARG
 #endif
-		Fn fn;
-		
 		template <typename T>
 		sink_t const &operator <<(fmt_t<T> const &v) {
 			v.print(fn);
@@ -369,6 +369,9 @@ namespace ntfmt {
 		sink_t const &operator <<(fmt_t<T> const &v) const { return const_cast<sink_t *>(this)->operator <<(v); }
 		template <typename T>
 		sink_t const &operator <<(T const &v) const { return const_cast<sink_t *>(this)->operator <<(v); }
+
+	private:
+		Fn fn;
 	};
 	typedef sink_t< detail::sink_strbuf_fn_t<char> > sink_strbuf;
 }

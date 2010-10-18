@@ -13,6 +13,7 @@ namespace ntfmt {
 			int operator ()(char c) { return fputc(c, fp); }
 			int operator ()(wchar_t const *s) { return fputws(s, fp); }
 			int operator ()(wchar_t c) { return fputwc(c, fp); }
+		private:
 			FILE *const fp;
 		};
 		struct sink_stdout_fn_t: sink_cfile_fn_t {

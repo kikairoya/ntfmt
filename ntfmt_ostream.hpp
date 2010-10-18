@@ -13,6 +13,7 @@ namespace ntfmt {
 			int operator ()(char c) { os << c; return c; }
 			int operator ()(wchar_t const *s) { os << s; return wcslen(s); }
 			int operator ()(wchar_t c) { os << c; return c;}
+		private:
 			std::basic_ostream<charT, Traits> &os;
 		};
 	}

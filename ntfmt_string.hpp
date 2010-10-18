@@ -18,6 +18,7 @@ namespace ntfmt {
 				str += c;
 				return static_cast<int>(c);
 			}
+		private:
 			std::basic_string<charT> &str;
 		};
 	}
