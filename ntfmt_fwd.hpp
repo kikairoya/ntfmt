@@ -50,7 +50,6 @@ namespace ntfmt {
 
 	template <typename T>
 	struct fmt_t;
-	struct sink_fn_t;
 
 	namespace detail {
 		inline flags_t const default_flags();
@@ -92,13 +91,14 @@ namespace ntfmt {
 			virtual int operator ()(wchar_t) { return -1; }
 			~sink_fn_base() { }
 		};
-		template <typename charT>
-		struct sink_fn_t: sink_fn_base {
-			typedef charT char_type;
-			int operator ()(charT c) = 0;
-			using sink_fn_base::operator ();
-		};
 	}
+
+	template <typename charT>
+	struct sink_fn_t: detail::sink_fn_base {
+		typedef charT char_type;
+		int operator ()(charT c) = 0;
+		using sink_fn_base::operator ();
+	};
 
 #define SPECIALIZE_NTFMT_FORMATTER(TYPE) \
 	template <> \

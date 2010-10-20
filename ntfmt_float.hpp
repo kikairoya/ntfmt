@@ -202,7 +202,8 @@ namespace ntfmt {
 					*phead++ = NTFMT_CHR_DOT;
 					if (e <= -prec) buf[0] = 0;
 				} else {
-					std::copy_backward(array_begin(buf)+e, array_begin(buf)+gstrlen(buf), array_begin(buf)+e+1);
+					charT *const end = &buf[strlen(buf)]+1;
+					std::copy_backward(&buf[e], end, end+1);
 					buf[e] = NTFMT_CHR_DOT;
 					if (!flags.fixed && !flags.alter) {
 						charT *p = buf + gstrlen(buf) - 1;

@@ -15,7 +15,7 @@
 //  fn: sink_fn_t &
 // to output, call fn(char) or fn(const char *) or each wchar_t version if sink supported.
 // to redirect other formatter, call fmt('an object of any other type', 'flags in string or flags_t').print(fn).
-SPECIALIZE_NTFMT_FORMATTER(std::complex<double>) {
+/*SPECIALIZE_NTFMT_FORMATTER(std::complex<double>) {
 	if (value.real()!=0) {
 		fmt(value.real(), flags).print(fn);
 		if (value.imag()>0) fn('+');
@@ -26,6 +26,22 @@ SPECIALIZE_NTFMT_FORMATTER(std::complex<double>) {
 		fmt(value.imag(), flags).print(fn);
 		fn('i');
 	}
+}*/
+
+namespace ntfmt{
+template <typename charT, typename T>
+void ntfmt_printer(sink_fn_t<charT> &fn, std::complex<T> const &value, flags_t const &flags) {
+	if (value.real()!=0) {
+		fmt(value.real(), flags).print(fn);
+		if (value.imag()>0) fn('+');
+	} else {
+		if (value.imag()==0) fn('0');
+	}
+	if (value.imag()!=0) {
+		fmt(value.imag(), flags).print(fn);
+		fn('i');
+	}
+}
 }
 
 int main() {

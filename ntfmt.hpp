@@ -23,6 +23,18 @@
 #include <boost/preprocessor.hpp>
 
 namespace ntfmt {
+	template <typename charT>
+	struct sink_strbuf_fn_t: sink_fn_t<charT> {
+		template <size_t N>
+		sink_strbuf_fn_t(charT (*const &buf)[N]): buf(*buf), p(*buf), size(N) { }
+		sink_strbuf_fn_t(charT *const buf, size_t const size): buf(buf), p(buf), size(size) { }
+		int operator ()(charT c) { if (p < buf+size-1) { *p++ = c; *p = 0; return c; } return -1; }
+	private:
+		charT *const buf;
+		charT *p;
+		size_t const size;
+	};
+
 	namespace detail {
 #ifndef BOOST_DINKUMWARE_STDLIB
 		using std::abs;
@@ -102,19 +114,6 @@ namespace ntfmt {
 			*endp = nptr;
 			return ret;
 		}
-
-		template <typename charT>
-		struct sink_strbuf_fn_t: sink_fn_t<charT> {
-			template <size_t N>
-			sink_strbuf_fn_t(charT (*const &buf)[N]): buf(*buf), p(*buf), size(N) { }
-			sink_strbuf_fn_t(charT *const buf, size_t const size): buf(buf), p(buf), size(size) { }
-			int operator ()(charT c) { if (p < buf+size-1) { *p++ = c; *p = 0; return c; } return -1; }
-		private:
-			charT *const buf;
-			charT *p;
-			size_t const size;
-		};
-
 
 		inline flags_t const default_flags() {
 			flags_t f;
@@ -219,7 +218,7 @@ namespace ntfmt {
 		}
 
 		template <typename charT>
-		int fill_chr_to(sink_fn_t<charT> &fn, charT const c, size_t N) { size_t n; for (n = 0; n < N && fn(c) >= 0; ++n) ; return n; }
+		int fill_chr_to(sink_fn_t<charT> &fn, charT const c, int N) { int n; for (n = 0; n < N && fn(c) >= 0; ++n) ; return n; }
 		template <typename charT, typename T>
 		void integer_printer_helper(sink_fn_t<charT> &fn, T value, flags_t const &flags, bool inv) {
 			charT head[6] = { };
@@ -252,7 +251,7 @@ namespace ntfmt {
 			size_t const wid = gstrlen(head) + (rl < prec ? prec : rl);
 			if (!flags.minus) fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - wid);
 			fn(head);
-			fill_chr_to(fn, NTFMT_CHR_SPACE, prec - rl);
+			fill_chr_to(fn, NTFMT_CHR_ZERO, prec - rl);
 			fn(r);
 			if (flags.minus) fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - wid);
 		}
@@ -345,6 +344,12 @@ namespace ntfmt {
 			if (flags.minus) fn(value);
 		}
 
+
+	}
+
+	template <typename charT, typename T>
+	inline void ntfmt_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags) {
+		detail::default_printer(fn, value, flags);
 	}
 
 	template <typename T>
@@ -352,8 +357,8 @@ namespace ntfmt {
 		fmt_t(T const &v, char const *const f): value(v), flags(detail::decode_flags(f)) { }
 		fmt_t(T const &v, wchar_t const *const f): value(v), flags(detail::decode_flags(f)) { }
 		fmt_t(T const &v, flags_t const &f): value(v), flags(f) { }
-		template <typename Fn>
-		void print(Fn &fn) const { detail::default_printer(fn, value, flags); }
+		template <typename charT>
+		void print(sink_fn_t<charT> &fn) const { ntfmt_printer(fn, value, flags); }
 	private:
 		T const &value;
 		flags_t const flags;
@@ -428,7 +433,7 @@ namespace ntfmt {
 	private:
 		Fn fn;
 	};
-	typedef sink_t< detail::sink_strbuf_fn_t<char> > sink_strbuf;
+	typedef sink_t< sink_strbuf_fn_t<char> > sink_strbuf;
 }
 
 #include "ntfmt_float.hpp"

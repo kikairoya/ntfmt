@@ -4,25 +4,24 @@
 #include "ntfmt.hpp"
 
 namespace ntfmt {
-	namespace detail {
-		template <typename charT>
-		struct sink_string_fn_t: sink_fn_t<charT> {
-			sink_string_fn_t(std::basic_string<charT> &str): str(str) { }
-			int operator ()(charT const *s) {
-				size_t const r = str.length();
-				str += s;
-				return str.length() - r;
-			}
-			int operator ()(charT c) {
-				str += c;
-				return static_cast<int>(c);
-			}
-		private:
-			std::basic_string<charT> &str;
-		};
-	}
-	typedef sink_t< detail::sink_string_fn_t<char> > sink_string;
-	typedef sink_t< detail::sink_string_fn_t<wchar_t> > sink_wstring;
+	template <typename charT>
+	struct sink_string_fn_t: sink_fn_t<charT> {
+		sink_string_fn_t(std::basic_string<charT> &str): str(str) { }
+		int operator ()(charT const *s) {
+			size_t const r = str.length();
+			str += s;
+			return str.length() - r;
+		}
+		int operator ()(charT c) {
+			str += c;
+			return static_cast<int>(c);
+		}
+	private:
+		std::basic_string<charT> &str;
+	};
+
+	typedef sink_t< sink_string_fn_t<char> > sink_string;
+	typedef sink_t< sink_string_fn_t<wchar_t> > sink_wstring;
 }
 
 #endif
