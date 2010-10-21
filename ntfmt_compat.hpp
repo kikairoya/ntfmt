@@ -17,7 +17,11 @@
 namespace ntfmt {
 	namespace detail {
 		typedef ::size_t size_t;
+#if defined(__clang__) && defined(__linux__)
+		typedef unsigned __INTPTR_TYPE__ uintptr_t;
+#else
 		typedef ::uintptr_t uintptr_t;
+#endif
 	}
 }
 
