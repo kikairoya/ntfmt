@@ -2,7 +2,6 @@
 #define NTFMT_FWD_HPP_
 
 #include "ntfmt_compat.hpp"
-#include <wchar.h>
 #include <boost/cstdint.hpp>
 
 namespace ntfmt {
@@ -98,12 +97,27 @@ namespace ntfmt {
 		typedef charT char_type;
 		int operator ()(charT c) = 0;
 		using sink_fn_base::operator ();
+		template <typename T>
+		sink_fn_t &operator <<(T const &v) { fmt(v).print(*this); return *this; }
+		template <typename T>
+		sink_fn_t &operator <<(fmt_t<T> const &v) { v.print(*this); return *this; }
+		template <typename T>
+		sink_fn_t const &operator <<(T const &v) const { fmt(v).print(*this); return *this; }
+		template <typename T>
+		sink_fn_t const &operator <<(fmt_t<T> const &v) const { v.print(*this); return *this; }
+#ifdef BOOST_HAS_VARIADIC_TMPL
+		sink_fn_t &format() { return *this; }
+		sink_fn_t const &format() const { return *this; }
+		template <typename A1, typename... Args>
+		sink_fn_t &format(A1 const &a1, Args const &...args) { fmt(a1).print(*this); return format(args...); }
+		template <typename A1, typename... Args>
+		sink_fn_t &format(fmt_t<A1> const &a1, Args const &...args) { a1.print(*this); return format(args...); }
+		template <typename A1, typename... Args>
+		sink_fn_t const &format(fmt_t<A1> const &a1, Args const &...args) const { return const_cast<sink_fn_t *>(this)->format(a1).format(std::forward<Args>(args)...); }
+		template <typename A1, typename... Args>
+		sink_fn_t const &format(A1 const &a1, Args const &...args) const { return const_cast<sink_fn_t *>(this)->format(a1).format(std::forward<Args>(args)...); }
+#endif
 	};
-
-#define SPECIALIZE_NTFMT_FORMATTER(TYPE) \
-	template <> \
-	template <typename Fn> \
-	void ::ntfmt::fmt_t<TYPE>::print(Fn &fn) const
 
 }
 

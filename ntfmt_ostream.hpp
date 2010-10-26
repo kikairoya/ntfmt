@@ -15,8 +15,8 @@ namespace ntfmt {
 	private:
 		std::basic_ostream<charT, Traits> &os;
 	};
-	typedef sink_t< sink_ostream_fn_t<char> > sink_ostream;
-	typedef sink_t< sink_ostream_fn_t<wchar_t> > sink_wostream;
+	typedef sink_ostream_fn_t<char> sink_ostream;
+	typedef sink_ostream_fn_t<wchar_t> sink_wostream;
 }
 
 #endif

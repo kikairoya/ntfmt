@@ -27,12 +27,12 @@ namespace ntfmt {
 	struct sink_stderr_fn_t: sink_cfile_fn_t<charT> {
 		sink_stderr_fn_t(): sink_cfile_fn_t<charT>(stderr) { }
 	};
-	typedef sink_t< sink_cfile_fn_t<char> > sink_cfile;
-	typedef sink_t< sink_stdout_fn_t<char> > sink_stdout;
-	typedef sink_t< sink_stderr_fn_t<char> > sink_stderr;
-	typedef sink_t< sink_cfile_fn_t<wchar_t> > sink_wcfile;
-	typedef sink_t< sink_stdout_fn_t<wchar_t> > sink_wstdout;
-	typedef sink_t< sink_stderr_fn_t<wchar_t> > sink_wstderr;
+	typedef sink_cfile_fn_t<char> sink_cfile;
+	typedef sink_stdout_fn_t<char> sink_stdout;
+	typedef sink_stderr_fn_t<char> sink_stderr;
+	typedef sink_cfile_fn_t<wchar_t> sink_wcfile;
+	typedef sink_stdout_fn_t<wchar_t> sink_wstdout;
+	typedef sink_stderr_fn_t<wchar_t> sink_wstderr;
 }
 
 #endif

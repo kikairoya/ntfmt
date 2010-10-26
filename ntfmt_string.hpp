@@ -20,8 +20,8 @@ namespace ntfmt {
 		std::basic_string<charT> &str;
 	};
 
-	typedef sink_t< sink_string_fn_t<char> > sink_string;
-	typedef sink_t< sink_string_fn_t<wchar_t> > sink_wstring;
+	typedef sink_string_fn_t<char> sink_string;
+	typedef sink_string_fn_t<wchar_t> sink_wstring;
 }
 
 #endif

@@ -4,6 +4,7 @@
 #include "ntfmt_fwd.hpp"
 
 #include <string.h>
+#include <wchar.h>
 #include <cstdlib>
 #include <string>
 #include <algorithm>
@@ -20,21 +21,7 @@
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/type_traits/make_unsigned.hpp>
 
-#include <boost/preprocessor.hpp>
-
 namespace ntfmt {
-	template <typename charT>
-	struct sink_strbuf_fn_t: sink_fn_t<charT> {
-		template <size_t N>
-		sink_strbuf_fn_t(charT (*const &buf)[N]): buf(*buf), p(*buf), size(N) { }
-		sink_strbuf_fn_t(charT *const buf, size_t const size): buf(buf), p(buf), size(size) { }
-		int operator ()(charT c) { if (p < buf+size-1) { *p++ = c; *p = 0; return c; } return -1; }
-	private:
-		charT *const buf;
-		charT *p;
-		size_t const size;
-	};
-
 	namespace detail {
 #ifndef BOOST_DINKUMWARE_STDLIB
 		using std::abs;
@@ -92,7 +79,7 @@ namespace ntfmt {
 		struct char_literal<char, C, W>: integral_constant<char, C> { };
 		template <char C, wchar_t W>
 		struct char_literal<wchar_t, C, W>: integral_constant<wchar_t, W> { };
-#define NTFMT_CH_LIT(c) char_literal<charT, c, L##c>::value
+#define NTFMT_CH_LIT(c) ::ntfmt::detail::char_literal<charT, c, L##c>::value
 #define NTFMT_CHR_ZERO NTFMT_CH_LIT('0')
 #define NTFMT_CHR_SPACE NTFMT_CH_LIT(' ')
 #define NTFMT_CHR_MINUS NTFMT_CH_LIT('-')
@@ -278,14 +265,15 @@ namespace ntfmt {
 		template <typename T> struct is_usual_integral_type: not_< or_< is_character_type<T>, is_boolean_type<T> > > { };
 		template <typename T> struct is_usual_unsigned_type: and_< is_unsigned<T>, is_usual_integral_type<T> > { };
 		template <typename T> struct is_usual_signed_type: and_< is_signed<T>, is_usual_integral_type<T> > { };
+		template <typename T, typename U> struct select_larger_type: if_c<(sizeof(T)<sizeof(U)), U, T> { };
 
 		template <typename charT, typename T>
 		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_usual_unsigned_type<T> >::type * = 0) {
-			integer_printer<charT, typename if_c<sizeof(T) <= sizeof(unsigned long), unsigned long, T>::type>(fn, value, flags);
+			integer_printer<charT, typename select_larger_type<unsigned long, T>::type>(fn, value, flags);
 		}
 		template <typename charT, typename T>
 		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_usual_signed_type<T> >::type * = 0) {
-			integer_printer<charT, typename if_c<sizeof(T) <= sizeof(long), long, T>::type>(fn, value, flags);
+			integer_printer<charT, typename select_larger_type<long, T>::type>(fn, value, flags);
 		}
 		template <typename charT, typename T>
 		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_pointer<T> >::type * = 0) {
@@ -296,7 +284,7 @@ namespace ntfmt {
 		void float_printer(sink_fn_t<charT> &fn, T const &value, const flags_t &flags);
 		template <typename charT, typename T>
 		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_floating_point<T> >::type * = 0) {
-			float_printer<charT, typename if_c<sizeof(T) <= sizeof(double), double, T>::type>(fn, value, flags);
+			float_printer<charT, typename select_larger_type<double, T>::type>(fn, value, flags);
 		}
 
 		template <typename charT> struct bool_str;
@@ -343,8 +331,6 @@ namespace ntfmt {
 			fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - gstrlen(value));
 			if (flags.minus) fn(value);
 		}
-
-
 	}
 
 	template <typename charT, typename T>
@@ -364,76 +350,20 @@ namespace ntfmt {
 		flags_t const flags;
 	};
 
-	template <typename Fn>
-	struct sink_t {
-#ifdef BOOST_HAS_VARIADIC_TMPL
-		sink_t &format() { return *this; }
-		sink_t const &format() const { return *this; }
-		template <typename A1, typename... Args>
-		sink_t &format(A1 const &a1, Args const &...args) {
-			fmt(a1).print(fn);
-			return format(args...);
-		}
-		template <typename A1, typename... Args>
-		sink_t &format(fmt_t<A1> const &a1, Args const &...args) {
-			a1.print(fn);
-			return format(args...);
-		}
-		template <typename A1, typename... Args>
-		sink_t const &format(fmt_t<A1> const &a1, Args const &...args) const { return const_cast<sink_t *>(this)->format(a1).format(std::forward<Args>(args)...); }
-		template <typename A1, typename... Args>
-		sink_t const &format(A1 const &a1, Args const &...args) const { return const_cast<sink_t *>(this)->format(a1).format(std::forward<Args>(args)...); }
-		template <typename... Args>
-		sink_t(Args &&...args): fn(std::forward<Args>(args)...) { }
-#else
-		sink_t(): fn() { }
-#define rARG(n) A##n &a##n
-#define cARG(n) A##n const &a##n
-#define ARG(r,t,n,e) BOOST_PP_COMMA_IF(n) BOOST_PP_EXPAND(BOOST_PP_CAT(e, ARG)(n))
-#define FWD(z,n,t) a##n
-#define CTOR_HELPER(n,arg_seq) \
-	template <BOOST_PP_ENUM_PARAMS(BOOST_PP_EXPAND(BOOST_PP_SEQ_SIZE(arg_seq)), typename A)> \
-		sink_t(BOOST_PP_SEQ_FOR_EACH_I(ARG, 0, arg_seq)): fn(BOOST_PP_ENUM_PARAMS(BOOST_PP_EXPAND(BOOST_PP_SEQ_SIZE(arg_seq)), a)) { }
-#define MAKE_RC_SEQ(z,n,t) ((r)(c))
-#define CTOR(z,n,t) \
-	BOOST_PP_SEQ_FOR_EACH_PRODUCT(CTOR_HELPER, BOOST_PP_REPEAT(BOOST_PP_ADD(n,1),MAKE_RC_SEQ,0))
-		BOOST_PP_REPEAT(6,CTOR,0);
-		/* here generates
-		  template <typename A0> sink_t(A0 &a0): fn(a0) { }
-		  template <typename A0> sink_t(A0 const &a0): fn(a0) { }
-		  template <typename A0, typename A1> sink_t(A0 &a0, A1 &a1): fn(a0, a1) { }
-		  template <typename A0, typename A1> sink_t(A0 const &a0, A1 &a1): fn(a0, a1) { }
-		  template <typename A0, typename A1> sink_t(A0 &a0, A1 const &a1): fn(a0, a1) { }
-		  template <typename A0, typename A1> sink_t(A0 const &a0, A1 const &a1): fn(a0, a1) { }
-		  ...
-		*/
-#undef CTOR
-#undef MAKE_RC_SEQ
-#undef CTOR_HELPER
-#undef FWD
-#undef ARG
-#undef cARG
-#undef rARG
-#endif
-		template <typename T>
-		sink_t &operator <<(fmt_t<T> const &v) {
-			v.print(fn);
-			return *this;
-		}
-		template <typename T>
-		sink_t &operator <<(T const &v) {
-			fmt(v).print(fn);
-			return *this;
-		}
-		template <typename T>
-		sink_t const &operator <<(fmt_t<T> const &v) const { return const_cast<sink_t *>(this)->operator <<(v); }
-		template <typename T>
-		sink_t const &operator <<(T const &v) const { return const_cast<sink_t *>(this)->operator <<(v); }
-
+	template <typename charT>
+	struct sink_strbuf_fn_t: sink_fn_t<charT> {
+		template <size_t N>
+		sink_strbuf_fn_t(charT (*const &buf)[N]): buf(*buf), p(*buf), size(N) { }
+		sink_strbuf_fn_t(charT *const buf, size_t const size): buf(buf), p(buf), size(size) { }
+		int operator ()(charT c) { if (p < buf+size-1) { *p++ = c; *p = 0; return c; } return -1; }
 	private:
-		Fn fn;
+		charT *const buf;
+		charT *p;
+		size_t const size;
 	};
-	typedef sink_t< sink_strbuf_fn_t<char> > sink_strbuf;
+
+	typedef sink_strbuf_fn_t<char> sink_strbuf;
+	typedef sink_strbuf_fn_t<wchar_t> sink_wstrbuf;
 }
 
 #include "ntfmt_float.hpp"

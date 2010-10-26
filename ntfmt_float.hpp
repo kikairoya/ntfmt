@@ -81,8 +81,6 @@ namespace ntfmt {
 			return r;
 		}
 
-		template <typename T, typename U>
-		struct select_larger_type: if_c<(sizeof(T)<sizeof(U)), U, T> { };
 		template <typename T>
 		struct dtoa_traits {
 			typedef typename boost::int_max_value_t<numeric_limits<T>::max_exponent>::least higher_type;
@@ -202,7 +200,7 @@ namespace ntfmt {
 					*phead++ = NTFMT_CHR_DOT;
 					if (e <= -prec) buf[0] = 0;
 				} else {
-					charT *const end = &buf[strlen(buf)]+1;
+					charT *const end = &buf[gstrlen(buf)]+1;
 					std::copy_backward(&buf[e], end, end+1);
 					buf[e] = NTFMT_CHR_DOT;
 					if (!flags.fixed && !flags.alter) {
