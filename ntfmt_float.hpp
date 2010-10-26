@@ -46,8 +46,8 @@ namespace ntfmt {
 
 		template <typename charT>
 		inline void inc_strnum(charT *const strnum, unsigned const base, unsigned const col, bool const capital) {
-			if (strnum[col]++ == to_hexstr<charT>(base-1, capital)) {
-				strnum[col] = to_hexstr<charT>(0, capital);
+			if (strnum[col]++ == to_hexstr<charT>(base-1, base, capital)) {
+				strnum[col] = to_hexstr<charT>(0, base, capital);
 				inc_strnum(strnum, base, col - 1, capital);
 			}
 		}
@@ -99,18 +99,18 @@ namespace ntfmt {
 			
 			charT buf[numeric_limits<T>::digits + 3] = { };
 			buf[0] = NTFMT_CHR_ZERO;
-			if (prec >= numeric_limits<T>::digits-3) prec = numeric_limits<T>::digits-3;
+			if (prec >= numeric_limits<T>::digits) prec = numeric_limits<T>::digits;
 			{
 				T q = v / ipow<T>(base, k);
 				charT const *const end = array_end(buf);
 				for (charT *ptr = array_begin(buf) + 1; ptr < end; ++ptr) {
 					q *= base;
 					T const fq = floor(q);
-					*ptr = to_hexstr<charT>(static_cast<unsigned>(fq)%base, capital);
+					*ptr = to_hexstr<charT>(fq, base, capital);
 					q -= fq;
 				}
 			}
-			if (static_cast<unsigned>(from_hexstr(buf[prec+1], capital)) >= base/2) inc_strnum(buf, base, prec, capital);
+			if (static_cast<unsigned>(from_hexstr(buf[prec+1], base, capital)) >= base/2) inc_strnum(buf, base, prec, capital);
 			
 			if (ntfmt_unlikely(buf[0] != NTFMT_CHR_ZERO)) {
 				gstrncpy(out, buf, prec+1);

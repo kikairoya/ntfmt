@@ -66,11 +66,11 @@ namespace ntfmt {
 			}
 		};
 		template <typename charT>
-		inline charT to_hexstr(unsigned const v, bool const capital) { return hexstr<charT>::str(capital)[v]; }
+		inline charT to_hexstr(unsigned const v, unsigned base, bool const capital) { return hexstr<charT>::str(capital)[v%base]; }
 		template <typename charT>
-		inline ptrdiff_t from_hexstr(charT const c, bool const capital) {
-			typedef hexstr<charT> hex;
-			return std::lower_bound(array_begin(hex::str(capital)), array_end(hex::str(capital)), c) - array_begin(hex::str(capital));
+		inline unsigned from_hexstr(charT const c, unsigned base, bool const capital) {
+			charT const *const str = hexstr<charT>::str(capital);
+			return std::find(str, str+base, c) - str;
 		}
 
 		template <typename charT, char C, wchar_t W>
@@ -90,13 +90,13 @@ namespace ntfmt {
 		inline size_t gstrlen(charT const *const s) { return std::char_traits<charT>::length(s); }
 
 		template <typename charT>
-		inline bool gisdigit(charT const c) { return NTFMT_CH_LIT('0') <= c && c <= NTFMT_CH_LIT('9'); }
+		inline bool gisdigit(charT const c) { return static_cast<unsigned>(from_hexstr(c, 10, false)) < 10; }
 		template <typename charT>
-		int extract_int(charT const *nptr, charT const **endp) {
+		int extract_decimal_int(charT const *nptr, charT const **endp) {
 			int ret = 0;
 			while (gisdigit(*nptr)) {
 				ret *= 10;
-				ret += *nptr++ - NTFMT_CHR_ZERO;
+				ret += from_hexstr(*nptr++, 10, false);
 			}
 			*endp = nptr;
 			return ret;
@@ -135,7 +135,7 @@ namespace ntfmt {
 			if (*fmtstr==NTFMT_CHR_PLUS) { f.plus = 1; f.space = 0; ++fmtstr; goto cont; }
 			{
 				charT const *const p = fmtstr;
-				f.width = extract_int(p, &fmtstr);
+				f.width = extract_decimal_int(p, &fmtstr);
 				f.width_enable = (p != fmtstr);
 			}
 			if (!*fmtstr) return def_flags;
@@ -144,7 +144,7 @@ namespace ntfmt {
 				++fmtstr;
 				if (!*fmtstr) return def_flags;
 				charT const *const p = fmtstr;
-				int const n = extract_int(p, &fmtstr);
+				int const n = extract_decimal_int(p, &fmtstr);
 				f.precision = (n<=0) ? 0 : n;
 				f.prec_enable = (p != fmtstr);
 			}
@@ -230,7 +230,7 @@ namespace ntfmt {
 				}
 
 				while (value) {
-					*--r = to_hexstr<charT>(static_cast<unsigned>(value%flags.radix), flags.capital);
+					*--r = to_hexstr<charT>(value, flags.radix, flags.capital);
 					value /= flags.radix;
 				}
 			}
