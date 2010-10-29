@@ -88,9 +88,9 @@ namespace ntfmt {
 		template <typename charT>
 		inline charT to_hexstr(unsigned const v, unsigned base, bool const capital) { return hexstr<charT>::str(capital)[v%base]; }
 		template <typename charT>
-		inline unsigned from_hexstr(charT const c, unsigned base, bool const capital) {
+		inline int from_hexstr(charT const c, unsigned base, bool const capital) {
 			charT const *const str = hexstr<charT>::str(capital);
-			return std::find(str, str+base, c) - str;
+			return static_cast<int>(std::find(str, str+base, c) - str);
 		}
 
 		template <typename charT, char C, wchar_t W>
