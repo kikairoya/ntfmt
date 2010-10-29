@@ -45,12 +45,12 @@ namespace ntfmt {
 #else
 	typedef unpacked_flags_t flags_t;
 #endif
+	inline flags_t const default_flags();
 
 	template <typename T>
 	struct fmt_t;
 
 	namespace detail {
-		inline flags_t const default_flags();
 		template <typename charT>
 		flags_t const decode_flags(charT const *fmtstr);
 	}
@@ -60,7 +60,7 @@ namespace ntfmt {
 	template <typename T>
 	inline fmt_t<T> fmt(T const &v, wchar_t const *const f) { return fmt_t<T>(v, f); }
 	template <typename T>
-	inline fmt_t<T> fmt(T const &v, flags_t const &f = detail::default_flags()) { return fmt_t<T>(v, f); }
+	inline fmt_t<T> fmt(T const &v, flags_t const &f = default_flags()) { return fmt_t<T>(v, f); }
 
 	template <typename Fn>
 	struct sink_t;

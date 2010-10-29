@@ -22,6 +22,25 @@
 #include <boost/type_traits/make_unsigned.hpp>
 
 namespace ntfmt {
+	inline flags_t const default_flags() {
+		flags_t f;
+		memset(&f, 0, sizeof(f));
+		f.radix = 10;
+		return f;
+	}
+	inline packed_flags_t const default_packed_flags() {
+		packed_flags_t f;
+		memset(&f, 0, sizeof(f));
+		f.radix = 10;
+		return f;
+	}
+	inline unpacked_flags_t const default_unpacked_flags() {
+		unpacked_flags_t f;
+		memset(&f, 0, sizeof(f));
+		f.radix = 10;
+		return f;
+	}
+
 	namespace detail {
 #ifndef BOOST_DINKUMWARE_STDLIB
 		using std::abs;
@@ -101,25 +120,6 @@ namespace ntfmt {
 			}
 			*endp = nptr;
 			return ret;
-		}
-
-		inline flags_t const default_flags() {
-			flags_t f;
-			memset(&f, 0, sizeof(f));
-			f.radix = 10;
-			return f;
-		}
-		inline packed_flags_t const default_packed_flags() {
-			packed_flags_t f;
-			memset(&f, 0, sizeof(f));
-			f.radix = 10;
-			return f;
-		}
-		inline unpacked_flags_t const default_unpacked_flags() {
-			unpacked_flags_t f;
-			memset(&f, 0, sizeof(f));
-			f.radix = 10;
-			return f;
 		}
 
 		template <typename charT>
