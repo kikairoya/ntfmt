@@ -267,6 +267,7 @@ namespace ntfmt {
 		template <typename T> struct is_usual_unsigned_type: and_< is_unsigned<T>, is_usual_integral_type<T> > { };
 		template <typename T> struct is_usual_signed_type: and_< is_signed<T>, is_usual_integral_type<T> > { };
 		template <typename T, typename U> struct select_larger_type: if_c<(sizeof(T)<sizeof(U)), U, T> { };
+		template <typename T, typename baseT> struct is_c_string: is_convertible<T, baseT const *> { };
 
 		template <typename charT, typename T>
 		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_usual_unsigned_type<T> >::type * = 0) {
@@ -277,7 +278,7 @@ namespace ntfmt {
 			integer_printer<charT, typename select_larger_type<long, T>::type>(fn, value, flags);
 		}
 		template <typename charT, typename T>
-		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_pointer<T> >::type * = 0) {
+		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< and_< is_pointer<T>, not_< is_c_string<T, charT> > > >::type * = 0) {
 			integer_printer<charT, uintptr_t>(fn, reinterpret_cast<uintptr_t>(value), flags);
 		}
 
@@ -324,8 +325,6 @@ namespace ntfmt {
 			if (!flags.minus) fn(value);
 		}
 
-		template <typename T, typename baseT>
-		struct is_c_string: is_convertible<T, baseT const *> { };
 		template <typename charT, typename T>
 		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_c_string<T, charT> >::type * = 0) {
 			if (!flags.minus) fn(value);
