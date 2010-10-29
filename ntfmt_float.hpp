@@ -15,13 +15,10 @@ namespace ntfmt {
 #ifdef BOOST_DINKUMWARE_STDLIB
 		using ::fabs;
 		using ::floor;
-		inline bool isinf(float d) { return !::_finite(d); }
 		inline bool isinf(double d) { return !::_finite(d); }
 		inline bool isinf(long double d) { return !::_finite((double)d); }
-		inline bool isnan(float d) { return !!::_isnan(d); }
 		inline bool isnan(double d) { return !!::_isnan(d); }
 		inline bool isnan(long double d) { return !!::_isnan((double)d); }
-		inline float nextafter(float x, float y) { return (float)::_nextafter(x, y); }
 		inline double nextafter(double x, double y) { return ::_nextafter(x, y); }
 		inline long double nextafter(long double x, long double y) { return ::_nextafter((double)x, (double)y); }
 #else
@@ -201,7 +198,7 @@ namespace ntfmt {
 					if (e <= -prec) buf[0] = 0;
 				} else {
 					charT *const end = &buf[gstrlen(buf)]+1;
-					std::copy_backward(&buf[e], end, end+1);
+					std::rotate(&buf[e], end, end+1);
 					buf[e] = NTFMT_CHR_DOT;
 					if (!flags.fixed && !flags.alter) {
 						charT *p = buf + gstrlen(buf) - 1;

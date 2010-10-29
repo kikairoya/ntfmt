@@ -2,7 +2,6 @@
 #define NTFMT_FWD_HPP_
 
 #include "ntfmt_compat.hpp"
-#include <boost/cstdint.hpp>
 
 namespace ntfmt {
 	struct packed_flags_t {

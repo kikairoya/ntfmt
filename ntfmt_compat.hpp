@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 #include <boost/config.hpp>
+#include <boost/cstdint.hpp>
+#include <boost/integer.hpp>
 
 #if defined(__GNUC__) && !defined(__clang__)
 #include <stdint.h>
@@ -17,10 +19,12 @@
 namespace ntfmt {
 	namespace detail {
 		typedef ::size_t size_t;
-#if defined(__clang__) && defined(__linux__)
-		typedef unsigned __INTPTR_TYPE__ uintptr_t;
-#else
+#if defined(__GNUC__)
+		typedef __UINTPTR_TYPE__ uintptr_t;
+#elif defined(_MSC_VER)
 		typedef ::uintptr_t uintptr_t;
+#else
+		typedef typename boost::uint_t<sizeof(void *)>::type uintptr_t;
 #endif
 	}
 }

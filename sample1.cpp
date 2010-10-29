@@ -21,7 +21,7 @@ int main() {
 	// print float with scientific format
 	sink_stdout() << fmt(853.842223, L"%e") << '\n'; // format string can be wide-character string
 	// print float with fixed format
-	sink_stdout() << fmt(0.74266684, "%.4f") << '\n';
+	sink_stdout() << fmt(0.74266684f, "%.4f") << '\n';
 	// print float with generic format
 	sink_stdout() << fmt(-3572194.239, "%g") << '\n';
 }

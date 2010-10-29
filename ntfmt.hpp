@@ -27,6 +27,7 @@ namespace ntfmt {
 		using std::abs;
 #endif
 		using std::numeric_limits;
+		using std::char_traits;
 		using boost::mpl::and_;
 		using boost::mpl::or_;
 		using boost::mpl::not_;
@@ -87,7 +88,7 @@ namespace ntfmt {
 #define NTFMT_CHR_DOT NTFMT_CH_LIT('.')
 
 		template <typename charT>
-		inline size_t gstrlen(charT const *const s) { return std::char_traits<charT>::length(s); }
+		inline size_t gstrlen(charT const *const s) { return char_traits<charT>::length(s); }
 
 		template <typename charT>
 		inline bool gisdigit(charT const c) { return static_cast<unsigned>(from_hexstr(c, 10, false)) < 10; }
