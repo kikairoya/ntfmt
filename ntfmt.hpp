@@ -215,7 +215,7 @@ namespace ntfmt {
 			charT *r = array_end(buf) - 1;
 			std::fill(array_begin(buf), array_end(buf), NTFMT_CHR_ZERO);
 			*r = 0;
-			unsigned const prec = flags.prec_enable ? flags.precision : 0;
+			unsigned const prec = flags.prec_enable ? flags.precision : 1;
 
 			if (value != 0 || !flags.prec_enable || prec != 0) {
 				if (inv) *phead++ = NTFMT_CHR_MINUS;
