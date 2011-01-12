@@ -45,6 +45,14 @@ namespace ntfmt {
 #ifndef BOOST_DINKUMWARE_STDLIB
 		using std::abs;
 #endif
+#ifdef __CYGWIN__
+		template <typename IntT>
+		inline IntT abs(IntT v) { return std::abs(v); }
+		template <>
+		inline long long abs(long long const v) { return v < 0 ? -v : v; }
+		template <>
+		inline unsigned long long abs(unsigned long long const v) { return v; }
+#endif
 		using std::numeric_limits;
 		using std::char_traits;
 		using boost::mpl::and_;
@@ -62,6 +70,10 @@ namespace ntfmt {
 		using boost::is_pointer;
 		using boost::make_unsigned;
 
+		template <typename T1, typename T2>
+		T1 const &ref_max(T1 const &v1, T2 const &v2) { return (v1 < v2) ? v2 : v1; }
+		template <typename T1, typename T2>
+		T1 const &ref_min(T1 const &v1, T2 const &v2) { return (v2 < v1) ? v2 : v1; }
 		template <typename T, size_t N>
 		inline T *array_begin(T (&a)[N]) { return &a[0]; }
 		template <typename T, size_t N>
@@ -85,8 +97,8 @@ namespace ntfmt {
 				return L"0123456789abcdefg";
 			}
 		};
-		template <typename charT>
-		inline charT to_hexstr(unsigned const v, unsigned base, bool const capital) { return hexstr<charT>::str(capital)[v%base]; }
+		template <typename charT, typename IntT>
+		inline charT to_hexstr(IntT const v, unsigned base, bool const capital) { return hexstr<charT>::str(capital)[v%base]; }
 		template <typename charT>
 		inline int from_hexstr(charT const c, unsigned base, bool const capital) {
 			charT const *const str = hexstr<charT>::str(capital);
@@ -161,6 +173,9 @@ namespace ntfmt {
 			case NTFMT_CH_LIT('t'):
 				++fmtstr;
 				goto skipping;
+			case NTFMT_CH_LIT('I'):
+				if (fmtstr[1]==NTFMT_CH_LIT('6') && fmtstr[2]==NTFMT_CH_LIT('4')) fmtstr += 3;
+				goto skipping;
 			case NTFMT_CH_LIT('c'):
 			case NTFMT_CH_LIT('s'):
 				f.character = 1;
@@ -202,6 +217,8 @@ namespace ntfmt {
 				f.radix = 16;
 				break;
 			}
+			if (f.minus) f.zero = 0;
+			if (f.plus) f.space = 0;
 			return f;
 		}
 
@@ -236,9 +253,10 @@ namespace ntfmt {
 				}
 			}
 			size_t const rl = gstrlen(r);
-			size_t const wid = gstrlen(head) + (rl < prec ? prec : rl);
-			if (!flags.minus) fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - wid);
+			size_t const wid = gstrlen(head) + ref_max(rl, prec);
+			if (!flags.minus && !flags.zero) fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - wid);
 			fn(head);
+			if (flags.zero) fill_chr_to(fn, NTFMT_CHR_ZERO, flags.width - wid);
 			fill_chr_to(fn, NTFMT_CHR_ZERO, prec - rl);
 			fn(r);
 			if (flags.minus) fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - wid);
