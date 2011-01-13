@@ -72,11 +72,11 @@ namespace ntfmt {
 		using boost::make_unsigned;
 
 		template <typename T1, typename T2>
-		inline T1 const &ref_max(T1 const &v1, T2 const &v2) { return (v1 < v2) ? v2 : v1; }
+		inline T1 ref_max(T1 const &v1, T2 const &v2) { return (v1 < v2) ? v2 : v1; }
 		template <typename T1, typename T2>
-		inline T1 const &ref_min(T1 const &v1, T2 const &v2) { return (v2 < v1) ? v2 : v1; }
+		inline T1 ref_min(T1 const &v1, T2 const &v2) { return (v2 < v1) ? v2 : v1; }
 		template <typename T1, typename T2, typename T3>
-		inline T2 const &ref_clip(T1 const &l, T2 const &v, T3 const &h) { return ref_max(ref_min(v, h), l); }
+		inline T2 ref_clip(T1 const &l, T2 const &v, T3 const &h) { return ref_max(ref_min(v, h), l); }
 		template <typename T, size_t N>
 		inline T *array_begin(T (&a)[N]) { return &a[0]; }
 		template <typename T, size_t N>
