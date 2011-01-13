@@ -5,20 +5,6 @@
 #define BOOST_TEST_MODULE integer_test
 #include "test_main.hpp"
 
-#if defined(_WIN32) && !defined(__CYGWIN__)
-#define fmtLL "I64"
-#else
-#define fmtLL "ll"
-#endif
-#define TEST_FORMAT(val, fmtstr) \
-	do { \
-		std::string s; \
-		char buf[100]; \
-		ntfmt::sink_string(s) << "'" << ntfmt::fmt(val, fmtstr) << "'"; \
-		sprintf(buf, "'" fmtstr "'", val); \
-		BOOST_CHECK_EQUAL(((void)val, s), buf); \
-	} while (0)
-
 BOOST_AUTO_TEST_CASE(integer_basic) {
 	TEST_FORMAT(0, "%d");
 	TEST_FORMAT(100, "%d");

@@ -64,6 +64,7 @@ namespace ntfmt {
 		using boost::true_type;
 		using boost::false_type;
 		using boost::is_convertible;
+		using boost::is_integral;
 		using boost::is_unsigned;
 		using boost::is_signed;
 		using boost::is_floating_point;
@@ -71,9 +72,11 @@ namespace ntfmt {
 		using boost::make_unsigned;
 
 		template <typename T1, typename T2>
-		T1 const &ref_max(T1 const &v1, T2 const &v2) { return (v1 < v2) ? v2 : v1; }
+		inline T1 const &ref_max(T1 const &v1, T2 const &v2) { return (v1 < v2) ? v2 : v1; }
 		template <typename T1, typename T2>
-		T1 const &ref_min(T1 const &v1, T2 const &v2) { return (v2 < v1) ? v2 : v1; }
+		inline T1 const &ref_min(T1 const &v1, T2 const &v2) { return (v2 < v1) ? v2 : v1; }
+		template <typename T1, typename T2, typename T3>
+		inline T2 const &ref_clip(T1 const &l, T2 const &v, T3 const &h) { return ref_max(ref_min(v, h), l); }
 		template <typename T, size_t N>
 		inline T *array_begin(T (&a)[N]) { return &a[0]; }
 		template <typename T, size_t N>
@@ -98,7 +101,9 @@ namespace ntfmt {
 			}
 		};
 		template <typename charT, typename IntT>
-		inline charT to_hexstr(IntT const v, unsigned base, bool const capital) { return hexstr<charT>::str(capital)[v%base]; }
+		inline charT to_hexstr(IntT const v, unsigned const base, bool const capital, typename enable_if< is_integral<IntT> >::type * = 0) {
+			return hexstr<charT>::str(capital)[v%base];
+		}
 		template <typename charT>
 		inline int from_hexstr(charT const c, unsigned base, bool const capital) {
 			charT const *const str = hexstr<charT>::str(capital);
@@ -174,7 +179,8 @@ namespace ntfmt {
 				++fmtstr;
 				goto skipping;
 			case NTFMT_CH_LIT('I'):
-				if (fmtstr[1]==NTFMT_CH_LIT('6') && fmtstr[2]==NTFMT_CH_LIT('4')) fmtstr += 3;
+				if ((fmtstr[1]==NTFMT_CH_LIT('6') && fmtstr[2]==NTFMT_CH_LIT('4')) ||
+					(fmtstr[1]==NTFMT_CH_LIT('3') && fmtstr[2]==NTFMT_CH_LIT('2'))) fmtstr += 3;
 				goto skipping;
 			case NTFMT_CH_LIT('c'):
 			case NTFMT_CH_LIT('s'):
