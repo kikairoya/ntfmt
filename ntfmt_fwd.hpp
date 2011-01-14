@@ -85,8 +85,10 @@ namespace ntfmt {
 		struct sink_fn_base: noncopyable {
 			virtual int operator ()(char const *s)  { int n; for (n = 0; *s && (*this)(*s++) >= 0; ++n) ; return n; }
 			virtual int operator ()(char) { return -1; }
+#ifndef NTFMT_DISABLE_WCHAR
 			virtual int operator ()(wchar_t const *s)  { int n; for (n = 0; *s && (*this)(*s++) >= 0; ++n) ; return n; }
 			virtual int operator ()(wchar_t) { return -1; }
+#endif
 			~sink_fn_base() { }
 		};
 	}

@@ -390,6 +390,8 @@ namespace ntfmt {
 	typedef sink_strbuf_fn_t<wchar_t> sink_wstrbuf;
 }
 
+#ifndef NTFMT_DISABLE_FLOAT
 #include "ntfmt_float.hpp"
+#endif
 
 #endif
