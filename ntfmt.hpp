@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <limits>
 #include <utility>
+#ifndef NTFMT_NO_BOOST
 #include <boost/utility/enable_if.hpp>
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/logical.hpp>
@@ -20,6 +21,9 @@
 #include <boost/type_traits/is_floating_point.hpp>
 #include <boost/type_traits/is_pointer.hpp>
 #include <boost/type_traits/make_unsigned.hpp>
+#else
+#include <type_traits>
+#endif
 
 namespace ntfmt {
 	inline flags_t const default_flags() {
@@ -55,6 +59,7 @@ namespace ntfmt {
 #endif
 		using std::numeric_limits;
 		using std::char_traits;
+#ifndef NTFMT_NO_BOOST
 		using boost::mpl::and_;
 		using boost::mpl::or_;
 		using boost::mpl::not_;
@@ -70,6 +75,50 @@ namespace ntfmt {
 		using boost::is_floating_point;
 		using boost::is_pointer;
 		using boost::make_unsigned;
+#else
+		using std::integral_constant;
+		using std::true_type;
+		using std::false_type;
+		using std::is_convertible;
+		using std::is_integral;
+		using std::is_floating_point;
+		using std::is_pointer;
+		using std::make_unsigned;
+		template <bool ...Args>
+		struct and_c;
+		template <>
+		struct and_c<true>: integral_constant<bool, true> { };
+		template <bool ...Args>
+		struct and_c<false, Args...>: integral_constant<bool, false> { };
+		template <bool ...Args>
+		struct and_c<true, Args...>: and_c<Args...> { };
+		template <typename ...Args>
+		struct and_: and_c<Args::value...> { };
+		template <bool ...Args>
+		struct or_c;
+		template <>
+		struct or_c<false>: integral_constant<bool, false> { };
+		template <bool ...Args>
+		struct or_c<true, Args...>: integral_constant<bool, true> { };
+		template <bool ...Args>
+		struct or_c<false, Args...>: or_c<Args...> { };
+		template <typename ...Args>
+		struct or_: or_c<Args::value...> { };
+		template <typename Arg>
+		struct not_: integral_constant<bool, not Arg::value> { };
+		template <bool Cond, typename A, typename B>
+		struct if_c;
+		template <typename A, typename B>
+		struct if_c<true, A, B> { typedef A type; };
+		template <typename A, typename B>
+		struct if_c<false, A, B> { typedef B type; };
+		template <typename Cond, typename T = void>
+		struct enable_if: std::enable_if<Cond::value, T> { };
+		template <typename T>
+		struct is_unsigned: and_<is_integral<T>, std::is_unsigned<T>> { };
+		template <typename T>
+		struct is_signed: and_<is_integral<T>, std::is_signed<T>> { };
+#endif
 
 		template <typename T1, typename T2>
 		inline T1 ref_max(T1 const &v1, T2 const &v2) { return (v1 < v2) ? v2 : v1; }

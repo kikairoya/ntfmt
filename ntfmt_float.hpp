@@ -15,8 +15,10 @@
 #include <string.h>
 #include <float.h>
 #include <cmath>
+#ifndef NTFMT_NO_BOOST
 #include <boost/integer.hpp>
 #include <boost/type_traits/integral_promotion.hpp>
+#endif
 
 namespace ntfmt {
 	namespace detail {
@@ -118,11 +120,47 @@ namespace ntfmt {
 			return static_cast<int>(floor( (base==10) ? log10(v) : (log(v)/log(static_cast<T>(base))) )) + 1;
 		}
 
+		namespace detail {
+#ifndef NTFMT_NO_BOOST
+			using boost::int_max_value_t;
+			using boost::int_min_value_t;
+			using boost::integral_promotion;
+#else
+			template <unsigned long long N>
+			struct int_max_value_t {
+				typedef
+					typename if_c<(N<=UCHAR_MAX), unsigned char,
+					typename if_c<(N<=USHRT_MAX), unsigned short,
+					typename if_c<(N<=UINT_MAX), unsigned int,
+					typename if_c<(N<=ULONG_MAX), unsigned long,
+					typename if_c<(N<=ULONG_LONG_MAX), unsigned long long,
+				void>::type>::type>::type>::type>::type type;
+				typedef type least;
+				typedef type fast;
+			};
+			template <long long N>
+			struct int_min_value_t {
+				typedef
+					typename if_c<(N>=SCHAR_MIN), signed char,
+					typename if_c<(N>=SHRT_MIN), signed short,
+					typename if_c<(N>=INT_MIN), signed int,
+					typename if_c<(N>=LONG_MIN), signed long,
+					typename if_c<(N>=LONG_LONG_MIN), signed long long, 
+				void>::type>::type>::type>::type>::type type;
+				typedef type least;
+				typedef type fast;
+			};
+			template <typename T>
+			struct integral_promotion {
+				typedef decltype((T)0+0) type;
+			};
+#endif
+		}
 		template <typename T>
 		struct dtoa_traits {
-			typedef typename boost::int_max_value_t<numeric_limits<T>::max_exponent>::least higher_type;
-			typedef typename boost::int_min_value_t<numeric_limits<T>::min_exponent>::least lower_type;
-			typedef typename boost::integral_promotion<typename select_larger_type<higher_type, lower_type>::type>::type return_type;
+			typedef typename detail::int_max_value_t<numeric_limits<T>::max_exponent>::least higher_type;
+			typedef typename detail::int_min_value_t<numeric_limits<T>::min_exponent>::least lower_type;
+			typedef typename detail::integral_promotion<typename select_larger_type<higher_type, lower_type>::type>::type return_type;
 		};
 		template <typename charT, typename T, size_t N>
 		typename dtoa_traits<T>::return_type dtoa(charT (&out)[N], T const v, int prec, flags_t const &flags) {

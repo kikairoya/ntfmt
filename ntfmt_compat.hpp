@@ -2,8 +2,17 @@
 #define NTFMT_COMPAT_HPP_
 
 #include <stddef.h>
+
+#ifndef NTFMT_NO_BOOST
 #include <boost/config.hpp>
 #include <boost/cstdint.hpp>
+#else
+#include <cstdint>
+#include <utility>
+#undef BOOST_NO_DEFAULTED_FUNCTIONS
+#undef BOOST_NO_DELETED_FUNCTIONS
+#undef BOOST_NO_VARIADIC_TEMPLATES
+#endif
 
 #if defined(__GNUC__) && !defined(__clang__)
 #define ntfmt_likely(x)       __builtin_expect((x),1)

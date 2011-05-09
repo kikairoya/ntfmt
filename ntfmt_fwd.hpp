@@ -106,7 +106,7 @@ namespace ntfmt {
 		sink_fn_t const &operator <<(T const &v) const { fmt(v).print(*this); return *this; }
 		template <typename T>
 		sink_fn_t const &operator <<(fmt_t<T> const &v) const { v.print(*this); return *this; }
-#ifdef BOOST_HAS_VARIADIC_TMPL
+#ifndef BOOST_NO_VARIADIC_TEMPLATES
 		sink_fn_t &format() { return *this; }
 		sink_fn_t const &format() const { return *this; }
 		template <typename A1, typename... Args>
