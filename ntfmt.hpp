@@ -251,6 +251,7 @@ namespace ntfmt {
 			case NTFMT_CH_LIT('b'):
 				f.radix = 2;
 				break;
+#ifndef NTFMT_DISABLE_FLOAT
 			case NTFMT_CH_LIT('E'):
 				f.capital = 1;
 			case NTFMT_CH_LIT('e'): // fallthrough
@@ -271,6 +272,7 @@ namespace ntfmt {
 				f.exponential = 1;
 				f.radix = 16;
 				break;
+#endif
 			}
 			if (f.minus) f.zero = 0;
 			if (f.plus) f.space = 0;
