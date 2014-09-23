@@ -180,9 +180,11 @@ namespace ntfmt {
 					*ptr = to_hexstr<charT>(q, base, capital);
 					q = fmod(q, base) * base;
 				}
+				unsigned f = static_cast<unsigned>(from_hexstr(out[prec+1], base, capital));
+				if (f > base/2 || (f == base/2 && !(q == 0 && static_cast<unsigned>(from_hexstr(out[prec], base, capital))%2 == 0))) {
+					inc_strnum(out, base, prec, capital);
+				}
 			}
-			if (static_cast<unsigned>(from_hexstr(out[prec+1], base, capital)) >= base/2) inc_strnum(out, base, prec, capital);
-
 			bool const carried = (out[0] != NTFMT_CHR_ZERO);
 			if (!carried) std::copy(out+1, out+prec+1, out);
 			out[prec+carried] = 0;

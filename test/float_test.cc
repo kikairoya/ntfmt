@@ -42,7 +42,10 @@ BOOST_AUTO_TEST_CASE(float_f_width) {
 BOOST_AUTO_TEST_CASE(float_f_precision) {
 	TEST_FORMAT(0.0, "%.0f");  // "0"
 	TEST_FORMAT(0.0, "%.1f");  // " 0.0"
-	TEST_FORMAT(0.5, "%.0f");  // "1"
+	TEST_FORMAT(0.05, "%.0f");  // "0"
+//	TEST_FORMAT(0.05, "%.1f");  // "0.0" // printf returns "0.1" due to binarize error but shoud be 0.0 by NR
+	TEST_FORMAT(0.05, "%.2f");  // "0.05"
+	TEST_FORMAT(0.5, "%.0f");  // "0"
 	TEST_FORMAT(0.5, "%.1f");  // " 0.5"
 	TEST_FORMAT(0.5, "%.2f");  // " 0.50"
 	TEST_FORMAT(0.55, "%.1f"); // "0.6"
