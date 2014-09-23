@@ -37,6 +37,7 @@ BOOST_AUTO_TEST_CASE(float_f_width) {
 	TEST_FORMAT(0.5, "%9f"); // " 0.500000"
 	TEST_FORMAT(1.0, "%8f"); // "1.000000"
 	TEST_FORMAT(1.0, "%9f"); // " 1.000000"
+	TEST_FORMAT(123456789.0, "%3f"); // " 123456789"
 }
 
 BOOST_AUTO_TEST_CASE(float_f_precision) {
@@ -58,4 +59,26 @@ BOOST_AUTO_TEST_CASE(float_f_precision) {
 	TEST_FORMAT(1.55, "%.1f"); // " 1.6"
 	TEST_FORMAT(1.55, "%.2f"); // "1.55"
 	TEST_FORMAT(1.55, "%.3f"); // " 1.550"
+}
+
+BOOST_AUTO_TEST_CASE(float_f_width_precision) {
+	TEST_FORMAT(0.0, "%6.0f"); // "     0"
+	TEST_FORMAT(0.0, "%6.1f"); // "   0.0"
+	TEST_FORMAT(0.0, "%6.2f"); // "  0.00"
+	TEST_FORMAT(0.000005, "%6.0f"); // "     0"
+	TEST_FORMAT(0.000005, "%6.1f"); // "   0.0"
+	TEST_FORMAT(0.000005, "%6.2f"); // "  0.00"
+	TEST_FORMAT(0.5, "%6.0f"); // "     1"
+	TEST_FORMAT(0.5, "%6.1f"); // "   0.5"
+	TEST_FORMAT(0.5, "%6.2f"); // "  0.50"
+	TEST_FORMAT(0.555555, "%6.0f"); // "     1"
+	TEST_FORMAT(0.555555, "%6.1f"); // "   0.6"
+	TEST_FORMAT(0.555555, "%6.2f"); // "  0.56"
+	TEST_FORMAT(1.0, "%6.0f"); // "1.000000"
+	TEST_FORMAT(1.0, "%6.1f"); // "1.000000"
+	TEST_FORMAT(1.0, "%6.2f"); // " 1.000000"
+	TEST_FORMAT(12.555555, "%6.0f"); // "    13"
+	TEST_FORMAT(12.555555, "%6.1f"); // "  12.6"
+	TEST_FORMAT(12.555555, "%6.2f"); // " 12.56"
+	TEST_FORMAT(12.555555, "%6.3f"); // "12.556"
 }

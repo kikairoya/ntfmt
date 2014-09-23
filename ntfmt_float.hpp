@@ -251,7 +251,7 @@ namespace ntfmt {
 					}
 				}
 				int const lim = e < -prec ? prec : -e;
-				size_t const wid = gstrlen(head) + gstrlen(buf) + lim + (e>=1);
+				size_t const wid = gstrlen(head) + gstrlen(buf) + lim + (e>=1 ? e : 0);
 				
 				if (!flags.minus) fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - wid);
 				fn(head);
