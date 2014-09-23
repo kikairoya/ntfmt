@@ -21,9 +21,9 @@ namespace ntfmt {
 		unsigned width: 8;
 	};
 	struct unpacked_flags_t {
-		short precision;
-		short radix;
-		short width;
+		unsigned short precision;
+		unsigned short radix;
+		unsigned short width;
 		bool minus;
 		bool space;
 		bool alter;

@@ -19,15 +19,15 @@ BOOST_AUTO_TEST_CASE(integer_basic) {
 	TEST_FORMAT(static_cast<int>(0x7FFFFFFF), "%d");
 	TEST_FORMAT(static_cast<int>(0x80000000), "%d");
 	TEST_FORMAT(static_cast<int>(0xFFFFFFFF), "%d");
-	TEST_FORMAT(0x7FFFFFFFFFFFFFFull, "%"fmtLL"x");
-	TEST_FORMAT(0x800000000000000ull, "%"fmtLL"x");
-	TEST_FORMAT(0xFFFFFFFFFFFFFFFull, "%"fmtLL"x");
-	TEST_FORMAT(static_cast<long long>(0x7FFFFFFFFFFFFFFull), "%"fmtLL"d");
-	TEST_FORMAT(static_cast<long long>(0x800000000000000ull), "%"fmtLL"d");
-	TEST_FORMAT(static_cast<long long>(0xFFFFFFFFFFFFFFFull), "%"fmtLL"d");
+	TEST_FORMAT(0x7FFFFFFFFFFFFFFull, "%" fmtLL "x");
+	TEST_FORMAT(0x800000000000000ull, "%" fmtLL "x");
+	TEST_FORMAT(0xFFFFFFFFFFFFFFFull, "%" fmtLL "x");
+	TEST_FORMAT(static_cast<long long>(0x7FFFFFFFFFFFFFFull), "%" fmtLL "d");
+	TEST_FORMAT(static_cast<long long>(0x800000000000000ull), "%" fmtLL "d");
+	TEST_FORMAT(static_cast<long long>(0xFFFFFFFFFFFFFFFull), "%" fmtLL "d");
 	TEST_FORMAT(static_cast<unsigned>(-1), "%u");
-	TEST_FORMAT(-1ll, "%"fmtLL"d");
-	TEST_FORMAT(static_cast<unsigned long long>(-1ll), "%"fmtLL"u");
+	TEST_FORMAT(-1ll, "%" fmtLL "d");
+	TEST_FORMAT(static_cast<unsigned long long>(-1ll), "%" fmtLL "u");
 }
 
 BOOST_AUTO_TEST_CASE(integer_width) {

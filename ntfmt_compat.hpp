@@ -7,6 +7,7 @@
 #include <boost/config.hpp>
 #include <boost/cstdint.hpp>
 #else
+#include <climits>
 #include <cstdint>
 #include <utility>
 #undef BOOST_NO_DEFAULTED_FUNCTIONS

@@ -329,7 +329,6 @@ namespace ntfmt {
 		inline T exact_abs(T const &value, typename enable_if< is_unsigned<T> >::type * = 0) { return value; }
 		template <typename charT, typename T>
 		inline void integer_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags) {
-			typedef typename make_unsigned<T>::type unsigned_type;
 			integer_printer_helper(fn, exact_abs(value), flags, is_negative_value(value));
 		}
 
