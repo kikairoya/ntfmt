@@ -28,6 +28,16 @@ BOOST_AUTO_TEST_CASE(integer_basic) {
 	TEST_FORMAT(static_cast<unsigned>(-1), "%u");
 	TEST_FORMAT(-1ll, "%" fmtLL "d");
 	TEST_FORMAT(static_cast<unsigned long long>(-1ll), "%" fmtLL "u");
+	{
+		int a = 0;
+		const int b = 0;
+		volatile int c = 0;
+		const volatile int d = 0;
+		TEST_FORMAT(a, "%d");
+		TEST_FORMAT(b, "%d");
+		TEST_FORMAT(c, "%d");
+		TEST_FORMAT(d, "%d");
+	}
 }
 
 BOOST_AUTO_TEST_CASE(integer_width) {

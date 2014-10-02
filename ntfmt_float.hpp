@@ -65,7 +65,7 @@ namespace ntfmt {
 		inline T get_successor(T const &v) { return nextafter(v, +numeric_limits<T>::infinity()); }
 
 		template <typename charT, typename FloatT>
-		inline charT to_hexstr(FloatT const v, unsigned const base, bool const capital, typename enable_if< is_floating_point<FloatT> >::type * = 0) {
+		inline charT to_hexstr(FloatT const v, unsigned const base, bool const capital, typename enable_if< is_floating_point<typename decay<FloatT>::type> >::type * = 0) {
 			return hexstr<charT>::str(capital)[static_cast<unsigned>(fmod(v, static_cast<FloatT>(base)))];
 		}
 

@@ -14,6 +14,7 @@
 #include <boost/utility/enable_if.hpp>
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/logical.hpp>
+#include <boost/type_traits/decay.hpp>
 #include <boost/type_traits/integral_constant.hpp>
 #include <boost/type_traits/is_convertible.hpp>
 #include <boost/type_traits/is_unsigned.hpp>
@@ -65,6 +66,7 @@ namespace ntfmt {
 		using boost::mpl::not_;
 		using boost::mpl::if_c;
 		using boost::enable_if;
+		using boost::decay;
 		using boost::integral_constant;
 		using boost::true_type;
 		using boost::false_type;
@@ -76,6 +78,7 @@ namespace ntfmt {
 		using boost::is_pointer;
 		using boost::make_unsigned;
 #else
+		using std::decay;
 		using std::integral_constant;
 		using std::true_type;
 		using std::false_type;
@@ -150,7 +153,7 @@ namespace ntfmt {
 			}
 		};
 		template <typename charT, typename IntT>
-		inline charT to_hexstr(IntT const v, unsigned const base, bool const capital, typename enable_if< is_integral<IntT> >::type * = 0) {
+		inline charT to_hexstr(IntT const v, unsigned const base, bool const capital, typename enable_if< is_integral<typename decay<IntT>::type> >::type * = 0) {
 			return hexstr<charT>::str(capital)[v%base];
 		}
 		template <typename charT>
@@ -320,13 +323,13 @@ namespace ntfmt {
 		}
 
 		template <typename T>
-		inline bool is_negative_value(T const &value, typename enable_if< is_signed<T> >::type * = 0) { return value < 0; }
+		inline bool is_negative_value(T const &value, typename enable_if< is_signed<typename decay<T>::type> >::type * = 0) { return value < 0; }
 		template <typename T>
-		inline bool is_negative_value(T const &, typename enable_if< is_unsigned<T> >::type * = 0) { return false; }
+		inline bool is_negative_value(T const &, typename enable_if< is_unsigned<typename decay<T>::type> >::type * = 0) { return false; }
 		template <typename T>
-		inline typename make_unsigned<T>::type exact_abs(T const &value, typename enable_if< is_signed<T> >::type * = 0) { return abs(value); }
+		inline typename make_unsigned<T>::type exact_abs(T const &value, typename enable_if< is_signed<typename decay<T>::type> >::type * = 0) { return abs(value); }
 		template <typename T>
-		inline T exact_abs(T const &value, typename enable_if< is_unsigned<T> >::type * = 0) { return value; }
+		inline T exact_abs(T const &value, typename enable_if< is_unsigned<typename decay<T>::type> >::type * = 0) { return value; }
 		template <typename charT, typename T>
 		inline void integer_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags) {
 			integer_printer_helper(fn, exact_abs(value), flags, is_negative_value(value));
@@ -344,22 +347,22 @@ namespace ntfmt {
 		template <typename T, typename baseT> struct is_c_string: is_convertible<T, baseT const *> { };
 
 		template <typename charT, typename T>
-		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_usual_unsigned_type<T> >::type * = 0) {
+		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_usual_unsigned_type<typename decay<T>::type> >::type * = 0) {
 			integer_printer<charT, typename select_larger_type<unsigned long, T>::type>(fn, value, flags);
 		}
 		template <typename charT, typename T>
-		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_usual_signed_type<T> >::type * = 0) {
+		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_usual_signed_type<typename decay<T>::type> >::type * = 0) {
 			integer_printer<charT, typename select_larger_type<long, T>::type>(fn, value, flags);
 		}
 		template <typename charT, typename T>
-		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< and_< is_pointer<T>, not_< is_c_string<T, charT> > > >::type * = 0) {
+		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< and_< is_pointer<typename decay<T>::type>, not_< is_c_string<typename decay<T>::type, charT> > > >::type * = 0) {
 			integer_printer<charT, uintptr_t>(fn, reinterpret_cast<uintptr_t>(value), flags);
 		}
 
 		template <typename charT, typename T>
 		void float_printer(sink_fn_t<charT> &fn, T const &value, const flags_t &flags);
 		template <typename charT, typename T>
-		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_floating_point<T> >::type * = 0) {
+		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_floating_point<typename decay<T>::type> >::type * = 0) {
 			float_printer<charT, typename select_larger_type<double, T>::type>(fn, value, flags);
 		}
 
@@ -381,7 +384,7 @@ namespace ntfmt {
 			}
 		};
 		template <typename charT, typename T>
-		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_boolean_type<T> >::type * = 0) {
+		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_boolean_type<typename decay<T>::type> >::type * = 0) {
 			if (flags.alter) {
 				charT const *const s = bool_str<charT>::str(value);
 				if (flags.minus) fn(s);
@@ -400,7 +403,7 @@ namespace ntfmt {
 		}
 
 		template <typename charT, typename T>
-		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_c_string<T, charT> >::type * = 0) {
+		inline void default_printer(sink_fn_t<charT> &fn, T const &value, flags_t const &flags, typename enable_if< is_c_string<typename decay<T>::type, charT> >::type * = 0) {
 			if (!flags.minus) fn(value);
 			fill_chr_to(fn, NTFMT_CHR_SPACE, flags.width - gstrlen(value));
 			if (flags.minus) fn(value);
